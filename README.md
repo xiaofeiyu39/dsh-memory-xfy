@@ -41,6 +41,14 @@ mem-signals             # 聚合访问日志，算每条记忆的 importance
 
 ## 装
 
+从 npm：
+
+```bash
+dsh plugin --profile web add dsh-memory-xfy
+```
+
+从本地目录（源码 / 自己改过的版本）：
+
 ```bash
 dsh plugin --profile web add /path/to/dsh-memory-xfy
 ```

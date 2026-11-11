@@ -42,6 +42,14 @@ Three design trade-offs, each with a concrete cost it avoids:
 
 ## Install
 
+From npm:
+
+```bash
+dsh plugin --profile web add dsh-memory-xfy
+```
+
+From a local directory (source checkout or a version you've patched):
+
 ```bash
 dsh plugin --profile web add /path/to/dsh-memory-xfy
 ```
