@@ -1,0 +1,52 @@
+{
+  "name": "dsh-memory-xfy",
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "description": "DSH 分层记忆插件：跨层检索、按需简报、文件驱动。零 native 依赖、不做每轮 prompt 注入。",
+  "license": "MIT",
+  "author": "xiaofeiyu39",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xiaofeiyu39/dsh-memory-xfy.git"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "memory",
+    "retrieval",
+    "sqlite",
+    "fts5",
+    "plugin"
+  ],
+  "bin": {
+    "dsh-memory-init": "./bin/init.js"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./icon": "./icon.svg",
+    "./client": "./client.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  },
+  "files": [
+    "index.js",
+    "private.mjs",
+    "client.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "bin"
+  ]
+}

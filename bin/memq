@@ -1,0 +1,1177 @@
+#!/usr/bin/env python3
+import os, sys, sqlite3, hashlib, time, re, json, pathlib, math, ast
+from datetime import date
+
+HOME = pathlib.Path.home()
+DB = pathlib.Path(os.environ.get("MEMQ_DB") or (HOME / ".dsh" / "cache" / "mem.db"))
+SIGNALS = HOME / ".dsh" / "cache" / "mem-signals.json"
+TAGS_FILE = HOME / ".dsh" / "tags.json"
+ACCESS_LOG = HOME / ".dsh" / "cache" / "mem-access.jsonl"
+
+_LAYERS_JSON = HOME / ".dsh" / "layers.json"
+
+try:
+    _LAYERS_CFG = json.loads(_LAYERS_JSON.read_text(encoding="utf-8"))
+except Exception as e:
+    sys.exit(f"❌ 读不到层定义 {_LAYERS_JSON}：{e}")
+
+def _load_layers():
+    out = []
+    for L in _LAYERS_CFG.get("layers", []):
+        files = []
+        for f in L.get("files", []):
+            fp = HOME / ".dsh" / f
+            if fp.exists():
+                files.append(fp)
+        exts = L.get("exts")
+        only = set(L.get("only_names") or [])
+        exn = set(L.get("exclude_names") or [])
+        exp = tuple(L.get("exclude_prefixes") or [])
+        exs = tuple(L.get("exclude_suffixes") or [])
+        exc = tuple(L.get("exclude_contains") or [])
+        exd = set(L.get("exclude_dirs") or [])
+        ex_top = set(L.get("exclude_top_dirs") or [])
+        depth = int(L.get("depth", 9))
+
+        def walk(dd, lvl, base):
+            if lvl > depth:
+                return
+            try:
+                items = sorted(dd.iterdir())
+            except Exception:
+                return
+            for q in items:
+                if q.is_dir():
+                    if q.name not in exd:
+                        walk(q, lvl + 1, base)
+                    continue
+                if not q.is_file():
+                    continue
+                if only and q.name not in only:
+                    continue
+                if q.name in exn:
+                    continue
+                if exp and q.name.startswith(exp):
+                    continue
+                if exs and q.name.endswith(exs):
+                    continue
+                if any(c in q.name for c in exc):
+                    continue
+                if exts is not None and q.suffix not in exts:
+                    continue
+                if ex_top:
+                    try:
+                        rel = q.relative_to(base)
+                    except ValueError:
+                        continue
+                    if rel.parts and rel.parts[0] in ex_top:
+                        continue
+                files.append(q)
+
+        for d in L.get("dirs", []):
+            base = HOME / ".dsh" / d
+            if base.exists():
+                walk(base, 1, base)
+        out.append((L["name"], sorted(set(files)), int(L.get("weight", 3))))
+    return out
+
+LAYERS = _load_layers()
+
+CHUNK_TARGET = {}
+CHUNK_VERSION = "v2-priv800"
+
+def _script_notes(t):
+    out = []
+    for ln in t.splitlines():
+        s = ln.strip()
+        if s.startswith("#"):
+            out.append(s.lstrip("#").strip())
+    for pat in (r'"""[\s\S]*?"""', r"\'\'\'[\s\S]*?\'\'\'"):
+        for m in re.finditer(pat, t):
+            out.append(m.group(0))
+    return "\n".join(x for x in out if x)
+
+def read_text(f):
+    f = pathlib.Path(f)
+    in_script_dir = str(f).startswith(str(HOME / ".dsh" / "bin") + "/")
+    if in_script_dir:
+        if f.stat().st_size > 1_000_000:
+            return ""
+        return _script_notes(f.read_text(encoding="utf-8", errors="replace"))
+    return f.read_text(encoding="utf-8", errors="replace")
+
+def connect():
+    DB.parent.mkdir(parents=True, exist_ok=True)
+    c = sqlite3.connect(DB)
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("""CREATE TABLE IF NOT EXISTS files(
+        path TEXT PRIMARY KEY, layer TEXT, weight INT, mtime REAL, hash TEXT, size INT,
+        ver TEXT)""")
+    _cols = {r[1] for r in c.execute("PRAGMA table_info(files)")}
+    if "ver" not in _cols:
+        c.execute("ALTER TABLE files ADD COLUMN ver TEXT")
+    for _t in ("chunks", "chunks_record"):
+        c.execute(f"""CREATE VIRTUAL TABLE IF NOT EXISTS {_t} USING fts5(
+            body, path UNINDEXED, layer UNINDEXED, line UNINDEXED, weight UNINDEXED,
+            tokenize='trigram')""")
+    c.execute("""CREATE TABLE IF NOT EXISTS chunk_ts(
+        path TEXT, line INT, ts TEXT, ts_end TEXT, PRIMARY KEY(path, line))""")
+    return c
+
+FM_RE = re.compile(r"^---\n(.*?)\n---\n", re.S)
+FM_KEEP = ("title", "description", "keywords", "category", "name")
+
+def _fm_head(text):
+    m = FM_RE.match(text)
+    if not m:
+        return None, text
+    head = []
+    for line in m.group(1).splitlines():
+        k = line.split(":", 1)[0].strip()
+        if k in FM_KEEP:
+            head.append(line.strip())
+    rest = text[m.end():]
+    return ("\n".join(head) if head else None), rest
+
+def chunk_text(text, target=400, hard=1600):
+    fm = FM_RE.match(text)
+    fm_lines = text[:fm.end()].count("\n") if fm else 0
+    head, text = _fm_head(text)
+    out, buf, start_line, cur_line = [], [], 1, 1
+    if head:
+        out.append((1, head))
+    start_line = cur_line = fm_lines + 1
+    for raw in text.splitlines():
+        if raw.strip() == "":
+            if buf:
+                out.append((start_line, "\n".join(buf)))
+                buf = []
+            start_line = cur_line + 1
+        else:
+            if not buf:
+                start_line = cur_line
+            buf.append(raw)
+        cur_line += 1
+    if buf:
+        out.append((start_line, "\n".join(buf)))
+    merged = []
+    mbuf, mbuf_ln, mlen = [], None, 0
+    for ln, seg in out:
+        is_head = seg.lstrip().startswith("#")
+        if mbuf and (is_head or mlen + len(seg) > target):
+            merged.append((mbuf_ln, "\n\n".join(mbuf)))
+            mbuf, mbuf_ln, mlen = [], None, 0
+        if not mbuf:
+            mbuf_ln = ln
+        mbuf.append(seg)
+        mlen += len(seg) + 2
+    if mbuf:
+        merged.append((mbuf_ln, "\n\n".join(mbuf)))
+    out = merged
+    fine = []
+    for ln, seg in out:
+        while len(seg) > hard:
+            cut = seg.rfind("。", 0, target)
+            cut = cut + 1 if cut > 200 else target
+            piece = seg[:cut]
+            fine.append((ln, piece))
+            seg = seg[cut:]
+            ln += piece.count("\n")
+        fine.append((ln, seg))
+    return [(ln, s) for ln, s in fine if len(s.strip()) >= 20]
+
+SEC_HEAD_RE = re.compile(r"^#{1,3}\s+(.+)$")
+HHMM_RE = re.compile(r"^(\d{1,2}:\d{2})(?:\s*[~～\-—]\s*(\d{1,2}:\d{2}))?")
+DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
+
+def _file_date(path, text, mtime):
+    m = DATE_RE.search(str(path))
+    if m:
+        return m.group(1)
+    fm = FM_RE.match(text)
+    if fm:
+        m2 = re.search(r'created_at:\s*"?(\d{4}-\d{2}-\d{2})', fm.group(1))
+        if m2:
+            return m2.group(1)
+    return time.strftime("%Y-%m-%d", time.localtime(mtime))
+
+def section_times(text, path, mtime):
+    date = _file_date(path, text, mtime)
+    fm_ts = fm_end = None
+    fm = FM_RE.match(text)
+    if fm:
+        m1 = re.search(r'created_at:\s*"([^"]+)"', fm.group(1))
+        m2 = re.search(r'updated_at:\s*"([^"]+)"', fm.group(1))
+        if m1:
+            fm_ts = _pad_ts(m1.group(1)[:19].replace("T", " "))
+        if m2:
+            fm_end = _pad_ts(m2.group(1)[:19].replace("T", " "))
+    out = []
+    for i, raw in enumerate(text.splitlines(), 1):
+        m = SEC_HEAD_RE.match(raw)
+        if not m:
+            continue
+        hh = HHMM_RE.match(m.group(1).strip())
+        if hh:
+            out.append((i,
+                        _pad_ts(f"{date} {hh.group(1).zfill(5)}"),
+                        _pad_ts(f"{date} {hh.group(2).zfill(5)}") if hh.group(2) else None))
+    if not out:
+        out.append((1, fm_ts or time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime)), fm_end))
+    return out
+
+def _ts_of(secs, line):
+    ts = ts_end = None
+    for sln, s_ts, s_end in secs:
+        if sln <= line:
+            ts, ts_end = s_ts, s_end
+        else:
+            break
+    if ts is None and secs:
+        ts, ts_end = secs[0][1], secs[0][2]
+    return ts, ts_end
+
+def index(verbose=True):
+    c = connect()
+    n_new = n_skip = n_chunk = 0
+    seen = set()
+    _paths_hot = {r[0] for r in c.execute("SELECT DISTINCT path FROM chunks")}
+    _paths_cold = {r[0] for r in c.execute("SELECT DISTINCT path FROM chunks_record")}
+    for layer, files, weight in LAYERS:
+        for f in files:
+            f = pathlib.Path(f)
+            if not f.exists():
+                continue
+            seen.add(str(f))
+            st = f.stat()
+            row = c.execute("SELECT hash, mtime, size, ver, layer FROM files WHERE path=?",
+                            (str(f),)).fetchone()
+            _fast = (os.environ.get("MEMQ_FAST", "1") != "0")
+            if (_fast and row and row[1] == st.st_mtime and row[2] == st.st_size
+                    and row[3] == CHUNK_VERSION):
+                h = row[0]
+            else:
+                _h = hashlib.sha256(f.read_bytes())
+                _h.update(CHUNK_VERSION.encode())
+                h = _h.hexdigest()[:16]
+            has_ts = c.execute("SELECT 1 FROM chunk_ts WHERE path=? LIMIT 1", (str(f),)).fetchone()
+            _want = _tbl_of(layer, f)
+            _in_hot = str(f) in _paths_hot
+            _in_cold = str(f) in _paths_cold
+            _ok_tbl = (((_in_hot and not _in_cold and _want == "chunks")
+                        or (_in_cold and not _in_hot and _want == "chunks_record"))
+                       and row[4] == layer)
+            if row and row[0] == h and has_ts and _ok_tbl:
+                n_skip += 1
+                if row[3] != CHUNK_VERSION:
+                    c.execute("UPDATE files SET ver=? WHERE path=?", (CHUNK_VERSION, str(f)))
+                continue
+            try:
+                text = read_text(f)
+                if text is None:
+                    continue
+            except Exception:
+                continue
+            for _t in _ALL_TABLES:
+                c.execute("DELETE FROM " + _t + " WHERE path=?", (str(f),))
+            chunks = chunk_text(text, target=CHUNK_TARGET.get(layer, 400))
+            _tbl = _tbl_of(layer, f)
+            c.executemany(
+                "INSERT INTO " + _tbl + "(body, path, layer, line, weight) VALUES(?,?,?,?,?)",
+                [(body, str(f), layer, ln, weight) for ln, body in chunks])
+            secs = section_times(text, f, st.st_mtime)
+            c.execute("DELETE FROM chunk_ts WHERE path=?", (str(f),))
+            c.executemany(
+                "INSERT OR REPLACE INTO chunk_ts(path, line, ts, ts_end) VALUES(?,?,?,?)",
+                [(str(f), ln) + _ts_of(secs, ln) for ln, body in chunks])
+            c.execute("INSERT OR REPLACE INTO files(path, layer, weight, mtime, hash, size, ver) VALUES(?,?,?,?,?,?,?)",
+                      (str(f), layer, weight, st.st_mtime, h, st.st_size, CHUNK_VERSION))
+            n_new += 1
+            n_chunk += len(chunks)
+    for (p,) in c.execute("SELECT path FROM files").fetchall():
+        if p not in seen:
+            for _t in _ALL_TABLES:
+                c.execute("DELETE FROM " + _t + " WHERE path=?", (p,))
+            c.execute("DELETE FROM chunk_ts WHERE path=?", (p,))
+            c.execute("DELETE FROM files WHERE path=?", (p,))
+    c.commit()
+    _sync_tags_from_fm(c)
+    if verbose:
+        total = sum(c.execute("SELECT COUNT(*) FROM " + _t).fetchone()[0] for _t in _ALL_TABLES)
+        _hot = c.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+        print(f"索引完成：新/更新 {n_new} 个文件、{n_chunk} 段；未变 {n_skip}；"
+              f"库里共 {total} 段（热 {_hot} + 冷 {total - _hot}）")
+
+STOP = {"怎么", "如何", "什么", "为什么", "哪个", "哪些", "是否", "可以", "需要", "我们", "现在", "的", "了", "吗", "呢", "吧"}
+
+def terms_of(q):
+    parts = re.split(r"[\s，。、；：？！,.;:?!（）()\[\]\"'“”‘’]+", q.strip())
+    out = []
+    for t in parts:
+        t = t.strip()
+        if len(t) >= 2 and t not in STOP:
+            out.append(t)
+    if not out and q.strip():
+        out = [q.strip()]
+    TAIL = ("多少", "多久", "什么时候", "什么样", "怎么样", "是什么", "哪里", "几个", "几次", "了吗", "呢", "吧", "的", "了")
+    FILLER = ("注意事项", "相关内容", "相关", "内容", "情况", "方法", "办法",
+              "介绍", "说明", "东西", "事情")
+    stripped = []
+    for t in out:
+        changed = True
+        while changed:
+            changed = False
+            for w in TAIL + FILLER:
+                if len(t) > len(w) + 1 and t.endswith(w):
+                    t = t[: -len(w)]
+                    changed = True
+                    break
+        if len(t) >= 2:
+            stripped.append(t)
+    out = stripped or out
+    expanded = []
+    for t in out:
+        if len(t) >= 6 and re.search(r"[\u4e00-\u9fff]", t):
+            wins = [t[i:i+4] for i in range(0, len(t) - 3, 2)]
+            if t[-4:] not in wins:
+                wins.append(t[-4:])
+            expanded += wins
+        else:
+            expanded.append(t)
+    return expanded or out
+
+def bigrams(text):
+    out = []
+    for run in re.findall(r"[\u4e00-\u9fff]+|[A-Za-z0-9_./-]+", text):
+        if re.match(r"[\u4e00-\u9fff]", run):
+            out += [run[i:i+2] for i in range(len(run) - 1)] if len(run) > 1 else [run]
+        else:
+            out.append(run)
+    return out
+
+def _log_access(paths):
+    try:
+        if not paths:
+            return
+        ACCESS_LOG.parent.mkdir(parents=True, exist_ok=True)
+        rec = {"t": int(time.time() * 1000),
+               "src": os.environ.get("MEMQ_SRC", "cli"),
+               "paths": [str(p) for p in dict.fromkeys(paths)]}
+        with open(ACCESS_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+def _pad_ts(v):
+    if not v:
+        return v
+    if len(v) == 16:
+        return v + ":00"
+    return v
+
+def _norm_time(v, upper=False):
+    v = (v or "").strip()
+    if not v:
+        return ""
+    if re.fullmatch(r"\d{1,2}:\d{2}(:\d{2})?", v):
+        hms = v.zfill(5) if len(v) <= 5 else v.zfill(8)
+        return _pad_ts(f"{time.strftime('%Y-%m-%d')} {hms}")
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+        return f"{v} {'23:59:59' if upper else '00:00:00'}"
+    m = re.match(r"(\d{4}-\d{2}-\d{2})[ T](\d{1,2}:\d{2}(?::\d{2})?)", v)
+    if m:
+        hms = m.group(2).zfill(5) if len(m.group(2)) <= 5 else m.group(2).zfill(8)
+        return _pad_ts(f"{m.group(1)} {hms}")
+    return v
+
+_SIG_CACHE = None
+
+def _importance(path, line=None, for_score=False):
+    global _SIG_CACHE
+    if _SIG_CACHE is None:
+        try:
+            _SIG_CACHE = json.loads(SIGNALS.read_text(encoding="utf-8"))
+        except Exception:
+            _SIG_CACHE = {}
+    if line is not None:
+        try:
+            _li = int(float(line))
+        except (TypeError, ValueError):
+            _li = line
+        v = _SIG_CACHE.get(f"{path}:{_li}")
+        if isinstance(v, dict):
+            try:
+                return float(v.get("importance", 50))
+            except Exception:
+                pass
+    if _has_seg_key(str(path)):
+        return 50.0
+    v = _SIG_CACHE.get(str(path))
+    try:
+        return float(v.get("importance", 50)) if isinstance(v, dict) else 50.0
+    except Exception:
+        return 50.0
+
+_SEG_SET = None
+
+def _has_seg_key(path):
+    global _SEG_SET
+    if _SEG_SET is None:
+        _SEG_SET = set()
+        for k in (_SIG_CACHE or {}):
+            i = k.rfind(":")
+            if i > 0 and k[i + 1:].isdigit():
+                _SEG_SET.add(k[:i])
+    return path in _SEG_SET
+
+def _importance_old(path):
+    global _SIG_CACHE
+    if _SIG_CACHE is None:
+        try:
+            _SIG_CACHE = json.loads(SIGNALS.read_text(encoding="utf-8"))
+        except Exception:
+            _SIG_CACHE = {}
+    v = _SIG_CACHE.get(str(path))
+    try:
+        return float(v.get("importance", 50)) if isinstance(v, dict) else 50.0
+    except Exception:
+        return 50.0
+
+_TAG_CACHE = None
+
+def _tag_map(tags=None):
+    want = list(tags or [])
+    out = set()
+    for _layer, files, _w in LAYERS:
+        for f in files:
+            try:
+                txt = pathlib.Path(f).read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+            m = re.match(r"^---\n(.*?)\n---\n", txt, re.S)
+            if not m:
+                continue
+            have = set()
+            for field in ("tags", "keywords"):
+                mm = re.search(r"^" + field + r"\s*:\s*(.*)$", m.group(1), re.M)
+                if mm:
+                    for t in re.split(r"[\s,]+", mm.group(1).strip().strip('"')):
+                        if t:
+                            have.add(t)
+            if all(t in have for t in want):
+                out.add(str(f))
+    return out
+
+def _sync_tags_from_fm(c):
+    cols = [r[1] for r in c.execute("PRAGMA table_info(tags)")]
+    if cols and 'line' in cols:
+        c.execute("DROP TABLE tags")
+        cols = []
+    c.execute("""CREATE TABLE IF NOT EXISTS tags (
+        path TEXT NOT NULL, tag TEXT NOT NULL,
+        PRIMARY KEY (path, tag)) WITHOUT ROWID""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_tags_tag ON tags(tag)")
+    c.execute("DELETE FROM tags")
+    rows = []
+    for layer, files, _w in LAYERS:
+        for f in files:
+            try:
+                txt = pathlib.Path(f).read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+            m = re.match(r"^---\n(.*?)\n---\n", txt, re.S)
+            if not m:
+                continue
+            fm = m.group(1)
+            for field in ("tags", "keywords"):
+                mm = re.search(r"^" + field + r"\s*:\s*(.*)$", fm, re.M)
+                if not mm:
+                    continue
+                v = mm.group(1).strip().strip('"').strip("'")
+                for t in re.split(r"[\s,]+", v):
+                    if t:
+                        rows.append((str(f), t))
+    if rows:
+        c.executemany("INSERT OR IGNORE INTO tags(path, tag) VALUES (?,?)", rows)
+    c.commit()
+
+def _tag_set(c, tags):
+    try:
+        if not c.execute("SELECT COUNT(*) FROM tags").fetchone()[0]:
+            return None
+    except sqlite3.OperationalError:
+        return None
+    sets = []
+    for t in tags:
+        got = {p for (p,) in c.execute("SELECT path FROM tags WHERE tag=?", (t,))}
+        if not got:
+            return set()
+        sets.append(got)
+    return set.intersection(*sets) if sets else set()
+
+def _tag_ok(f, tagmap, path, line):
+    if not f["tag"]:
+        return True
+    if tagmap is None:
+        return True
+    return str(path) in tagmap
+
+def _tag_map():
+    out = {}
+    for _layer, files, _w in LAYERS:
+        for f in files:
+            try:
+                txt = pathlib.Path(f).read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+            m = re.match(r"^---\n(.*?)\n---\n", txt, re.S)
+            if not m:
+                continue
+            for field in ("tags", "keywords"):
+                mm = re.search(r"^" + field + r"\s*:\s*(.*)$", m.group(1), re.M)
+                if not mm:
+                    continue
+                for t in re.split(r"[\s,]+", mm.group(1).strip().strip('"')):
+                    if t:
+                        out.setdefault(t, set()).add(str(f))
+    return out
+
+def _seg_count(c, path):
+    n = 0
+    for _t in _ALL_TABLES:
+        try:
+            n += c.execute("SELECT COUNT(*) FROM " + _t + " WHERE path=?", (path,)).fetchone()[0]
+        except sqlite3.OperationalError:
+            pass
+    return n
+
+def _tag_bridge(c, q):
+    if not q.strip():
+        return {}
+    ql = re.sub(r"\s+", "", q.lower())
+    if len(ql) < 2:
+        return {}
+    try:
+        all_tags = [r[0] for r in c.execute("SELECT DISTINCT tag FROM tags")]
+    except sqlite3.OperationalError:
+        return {}
+    hot = [t for t in all_tags if len(t) >= 2 and (t.lower() in ql or ql in t.lower())]
+    if not hot:
+        return {}
+    out = {}
+    for t in hot:
+        paths = [p for (p,) in c.execute("SELECT path FROM tags WHERE tag=?", (t,))]
+        if not paths:
+            continue
+        nseg = sum(_seg_count(c, p) for p in paths)
+        w = min(1.0, 20.0 / max(1, nseg))
+        for p in paths:
+            if out.get(p, 0.0) < w:
+                out[p] = w
+    return out
+
+def _ts_map(c):
+    return {(p, ln): (ts, te) for p, ln, ts, te in
+            c.execute("SELECT path, line, ts, ts_end FROM chunk_ts").fetchall()}
+
+def _time_ok(f, tsmap, path, line):
+    keys = ("created_after", "created_before", "modified_after", "modified_before", "after", "before")
+    if not any(f[k] for k in keys):
+        return True
+    ts, te = tsmap.get((path, line), (None, None))
+    if not ts:
+        return False
+    mod = te or ts
+    if f["after"] and mod < f["after"]:
+        return False
+    if f["before"] and ts > f["before"]:
+        return False
+    if f["created_after"] and ts < f["created_after"]:
+        return False
+    if f["created_before"] and ts > f["created_before"]:
+        return False
+    if f["modified_after"] and mod < f["modified_after"]:
+        return False
+    if f["modified_before"] and mod > f["modified_before"]:
+        return False
+    return True
+
+def _env_filters():
+    g = lambda k: (os.environ.get(k) or "").strip()
+    sp = lambda v: [w for w in re.split(r"[\s,]+", v) if w]
+    _lay = set(sp(g("MEMQ_LAYER")))
+    return {
+        "layer": _lay or None,
+        "all": bool(g("MEMQ_ALL")),
+        "must": sp(g("MEMQ_MUST")),
+        "not": sp(g("MEMQ_NOT")),
+        "path": g("MEMQ_PATH").lower(),
+        "cat": [x for x in re.split(r"[\s,]+", g("MEMQ_CAT").lower()) if x],
+        "since": g("MEMQ_SINCE"),
+        "created_after": _norm_time(g("MEMQ_CAFTER")),
+        "created_before": _norm_time(g("MEMQ_CBEFORE"), upper=True),
+        "modified_after": _norm_time(g("MEMQ_MAFTER")),
+        "modified_before": _norm_time(g("MEMQ_MBEFORE"), upper=True),
+        "after": _norm_time(g("MEMQ_AFTER")),
+        "before": _norm_time(g("MEMQ_BEFORE"), upper=True),
+        "tag": sp(g("MEMQ_TAG")),
+        "minimp": float(g("MEMQ_MIN_IMP") or 0),
+        "maximp": float(g("MEMQ_MAX_IMP") or 100),
+    }
+
+_RECORD_LAYERS = {"daily", "log"}
+_ALL_TABLES = ("chunks", "chunks_record")
+
+_HOT_WINDOW = {L["name"]: max(0, int(L["window"]))
+               for L in _LAYERS_CFG.get("layers", []) if L.get("window") is not None}
+
+def _hot_window():
+    return dict(_HOT_WINDOW)
+
+def _day_of(path):
+    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", str(path))
+    if not m:
+        return None
+    try:
+        return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except ValueError:
+        return None
+
+def _is_archived(path):
+    return "/archived/" in str(path)
+
+def _tbl_of(layer, path):
+    if _is_archived(path):
+        return "chunks_record"
+    if layer not in _HOT_WINDOW:
+        return "chunks"
+    d = _day_of(path)
+    if d is None:
+        return "chunks"
+    keep = _hot_window().get(layer, _HOT_WINDOW[layer])
+    return "chunks" if (date.today() - d).days <= keep else "chunks_record"
+
+def _tables(f):
+    lay = f.get("layer")
+    if f.get("all"):
+        return ("chunks", "chunks_record")
+    if not lay:
+        return ("chunks",)
+    if set(lay) & set(_HOT_WINDOW):
+        return ("chunks", "chunks_record")
+    return ("chunks",)
+
+def _pass(f, body, path, layer, line=None):
+    if f["layer"] and layer not in f["layer"]:
+        return False, "layer"
+    low = body.lower()
+    for w in f["must"]:
+        if w.lower() not in low:
+            return False, "must"
+    for w in f["not"]:
+        if w.lower() in low:
+            return False, "not"
+    if f["path"] and f["path"] not in str(path).lower():
+        return False, "path"
+    if f["cat"]:
+        try:
+            fc = (front_category(path) or "").lower()
+            if not any(c in fc for c in f["cat"]):
+                return False, "cat"
+        except Exception:
+            return False, "cat"
+    if f["since"]:
+        m = re.search(r"(\d{4}-\d{2}-\d{2})", str(path))
+        if m and m.group(1) < f["since"]:
+            return False, "since"
+    if f["minimp"] > 0 or f["maximp"] < 100:
+        imp = _importance(path, line)
+        if imp < f["minimp"] or imp > f["maximp"]:
+            return False, "importance"
+    return True, ""
+
+_SYN_CACHE = None
+
+def _syn_map():
+    global _SYN_CACHE
+    if _SYN_CACHE is not None:
+        return _SYN_CACHE
+    out = {}
+    try:
+        with open(pathlib.Path.home() / ".dsh/synonyms.json", encoding="utf-8") as f:
+            data = json.load(f)
+        for a, b in data.get("pairs", []):
+            out.setdefault(a, []).append(b)
+            out.setdefault(b, []).append(a)
+    except Exception:
+        pass
+    _SYN_CACHE = out
+    return out
+
+def expand_synonyms(terms, raw=""):
+    m = _syn_map()
+    if not m:
+        return []
+    q = (raw or " ".join(terms)).lower()
+    tset = {t.lower() for t in terms}
+    out = []
+    for k, vs in m.items():
+        kl = k.lower()
+        if len(kl) >= 2:
+            hit = kl in q
+        else:
+            hit = kl in tset
+        if hit:
+            out.extend(vs)
+    lowset = tset | {q}
+    return [x for x in dict.fromkeys(out) if x.lower() not in tset]
+
+def query_rows(c, q, limit):
+    ts = terms_of(q)
+    qb = set(b.lower() for b in bigrams(" ".join(ts)))
+    ascii_terms = [t for t in ts if re.match(r"^[A-Za-z0-9_./-]+$", t)]
+    f = _env_filters()
+    tsmap = _ts_map(c)
+    _tag_hit = {}
+    tagmap = None
+    if f["tag"]:
+        tagmap = _tag_set(c, f["tag"])
+        if tagmap is None:
+            tagmap = _tag_map(f["tag"])
+    if not q.strip():
+        out = []
+        if isinstance(tagmap, set):
+            for _p in tagmap:
+                for _t in _tables(f):
+                    for r in c.execute("SELECT body, path, layer, line, weight FROM " + _t +
+                                       " WHERE path=?", (_p,)).fetchall():
+                        if (_pass(f, r[0], r[1], r[2], r[3])[0]
+                                and _time_ok(f, tsmap, r[1], r[3])):
+                            out.append((float(r[4] or 0), r[0], r[1], r[2], r[3]))
+            return out[:limit]
+        for _t in _tables(f):
+            for r in c.execute("SELECT body, path, layer, line, weight FROM " + _t).fetchall():
+                if (_pass(f, r[0], r[1], r[2], r[3])[0] and _time_ok(f, tsmap, r[1], r[3])
+                        and (tagmap is None or _tag_ok(f, tagmap, r[1], r[3]))):
+                    out.append((float(r[4] or 0), r[0], r[1], r[2], r[3]))
+        return out[:limit]
+    rows = []
+    if ascii_terms:
+        fts = " OR ".join('"' + t + '"' for t in ascii_terms)
+        try:
+            for _t in _tables(f):
+                rows += [r for r in c.execute(
+                    "SELECT body, path, layer, line, weight FROM " + _t + " WHERE " + _t + " MATCH ? "
+                    "ORDER BY bm25(" + _t + ", 1.0) LIMIT ?", (fts, limit * 8)).fetchall()
+                    if _pass(f, r[0], r[1], r[2], r[3])[0] and _time_ok(f, tsmap, r[1], r[3])
+                    and (tagmap is None or _tag_ok(f, tagmap, r[1], r[3]))][:limit]
+        except sqlite3.OperationalError:
+            pass
+    cand, gdf = [], {}
+    _allrows = []
+    for _t in _tables(f):
+        _allrows += c.execute("SELECT body, path, layer, line, weight FROM " + _t).fetchall()
+    for body, path, layer, line, weight in _allrows:
+        if not _pass(f, body, path, layer, line)[0]:
+            continue
+        if not _time_ok(f, tsmap, path, line):
+            continue
+        if tagmap is not None and not _tag_ok(f, tagmap, path, line):
+            continue
+        low = body.lower()
+        hit = [b for b in qb if b in low]
+        if not hit:
+            continue
+        for b in hit:
+            gdf[b] = gdf.get(b, 0) + 1
+        cand.append((body, path, layer, line, weight, low, hit))
+    n_cand = max(1, len(cand))
+    wid = {b: (math.log((n_cand - gdf[b] + 0.5) / (gdf[b] + 0.5) + 1) if gdf.get(b) else 0.0)
+           for b in qb}
+    live = [b for b in qb if wid[b] > 0]
+    wsum = sum(wid[b] for b in live) or 1.0
+    _bridge_on = (os.environ.get("MEMQ_TAGBRIDGE", "0") != "0"
+                  and len(qb) >= 2)
+    if _bridge_on:
+        _tag_hit = _tag_bridge(c, q)
+    scored, seen = [], set()
+    floor = 1 if len(qb) <= 1 else 2
+    for body, path, layer, line, weight, low, hit in cand:
+        if len(hit) < floor:
+            continue
+        wcov = sum(wid[b] for b in hit) / wsum
+        if wcov < float(os.environ.get("MEMQ_MIN_WCOV", "0.25")):
+            continue
+        seen.add((path, line))
+        exact = sum(1 for t in ts if len(t) >= 2 and t in low)
+        ratio = len(hit) / max(1, len(qb))
+        rel = ratio * 40 + len(hit) * 6 + exact * 25 - len(body) / 1500
+        _imp = _importance(path, line, for_score=True)
+        _wm = 1 + (weight - 3) * 0.06
+        score = rel * _wm * (0.75 + 0.5 * _imp / 100.0)
+        why = [f"覆盖 {len(hit)}/{len(qb)} 加权{wcov:.0%}", f"原词 {exact}"]
+        _LAYER_MUL = {"daily": 0.78, "log": 0.78, "reviews": 0.85}
+        score *= _LAYER_MUL.get(layer, 1.0)
+        _tb = _tag_hit.get(str(path)) if _bridge_on else None
+        if _tb:
+            _tmul = 1 + 0.25 * _tb
+            score *= _tmul
+            why.append(f"tag桥×{_tmul:.2f}")
+        _dm = re.search(r"(\d{4})-(\d{2})-(\d{2})", str(path))
+        if _dm and layer in ("daily", "log", "reviews"):
+            try:
+                _d = (date.today() - date(int(_dm.group(1)), int(_dm.group(2)), int(_dm.group(3)))).days
+                _decay = max(0.85, 1 - _d * 0.02)
+                score *= _decay
+                if _decay < 0.999:
+                    why.append(f"衰减×{_decay:.2f}({_d}天)")
+            except ValueError:
+                pass
+        if int(line or 0) == 1 and ("title:" in body or "description:" in body or "name:" in body):
+            score += exact * 20 + len(hit) * 3
+            why.append("头部段")
+        _m = re.search(r"keywords:([^\n]*)", body)
+        if _m:
+            _kw = _m.group(1).lower()
+            _kh = [b for b in qb if b in _kw]
+            if len(_kh) >= 2:
+                score += len(_kh) * 15
+                why.append(f"关键词命中{len(_kh)}")
+        if layer:
+            why.append(f"层系数×{_LAYER_MUL.get(layer, 1.0):.2f}")
+        imp = _importance(path, line)
+        if imp != 50:
+            why.append(f"重要 {imp:.0f}")
+        scored.append((score, body, path, layer, line, " · ".join(why)))
+    syn = expand_synonyms(ts, q)
+    if syn:
+        sqb = set(b.lower() for b in bigrams(" ".join(syn)))
+        if sqb:
+            need2 = min(len(sqb), max(1, int(len(sqb) * 0.5)))
+            _synrows = []
+            for _t in _tables(f):
+                _synrows += c.execute("SELECT body, path, layer, line, weight FROM " + _t).fetchall()
+            for body, path, layer, line, weight in _synrows:
+                if (path, line) in seen:
+                    continue
+                if not _pass(f, body, path, layer, line)[0]:
+                    continue
+                if not _time_ok(f, tsmap, path, line):
+                    continue
+                if tagmap is not None and not _tag_ok(f, tagmap, path, line):
+                    continue
+                low = body.lower()
+                cov2 = sum(1 for b in sqb if b in low)
+                if cov2 < need2:
+                    continue
+                exact2 = sum(1 for t in syn if len(t) >= 2 and t.lower() in low)
+                s2 = 18 + cov2 * 4 + exact2 * 15 + weight * 6 - len(body) / 2000
+                scored.append((s2, body, path, layer, line, f"同义词 {'/'.join(syn[:3])}"))
+
+    for body, path, layer, line, weight in rows:
+        if (path, line) in seen:
+            continue
+        if not _pass(f, body, path, layer, line)[0]:
+            continue
+        if not _time_ok(f, tsmap, path, line):
+            continue
+        if tagmap is not None and not _tag_ok(f, tagmap, path, line):
+            continue
+        scored.append((40 + len(ascii_terms) * 6 + weight * 6, body, path, layer, line,
+                       f"FTS 命中 {len(ascii_terms)} 个英文词"))
+    scored.sort(key=lambda x: (-x[0], str(x[2]), int(x[4]) if x[4] is not None else 0))
+    if os.environ.get("MEMQ_DEBUG"):
+        _dn = int(os.environ.get("MEMQ_DEBUG_N", "15"))
+        print(f"--- DEBUG q={q!r} 候选 {len(scored)} 段，前 {_dn} 名 ---", file=sys.stderr)
+        for _i, (_s, _b, _p, _l, _li, _w) in enumerate(scored[:_dn], 1):
+            print(f"{_i:3d}. {_s:7.1f}  [{_l}] {os.path.basename(str(_p))}:{_li}"
+                  f"  ({len(_b)}字)  {_w}", file=sys.stderr)
+    def diversify(rows, per_file=2, layer_share=0.6, base=20):
+        out, cnt_file, cnt_layer = [], {}, {}
+        cap_layer = max(2, int(base * layer_share))
+        for r in rows:
+            _s, _b, path, layer, _li, *_ = r
+            if cnt_file.get(str(path), 0) >= per_file:
+                continue
+            if cnt_layer.get(layer, 0) >= cap_layer:
+                continue
+            out.append(r)
+            cnt_file[str(path)] = cnt_file.get(str(path), 0) + 1
+            cnt_layer[layer] = cnt_layer.get(layer, 0) + 1
+        return out
+
+    top = diversify(scored, per_file=int(os.environ.get("MEMQ_PER_FILE", "2")),
+                     base=max(limit * 2, 20))
+    if len(top) < len(scored):
+        seen = {(str(x[2]), x[4]) for x in top}
+        top += [r for r in scored if (str(r[2]), r[4]) not in seen]
+    return top[: max(limit * 2, 20)]
+
+def _filter_desc():
+    g = lambda k: (os.environ.get(k) or "").strip()
+    parts = []
+    for env, name in (("MEMQ_LAYER", "层"), ("MEMQ_CAT", "分类"),
+                      ("MEMQ_PATH", "路径"), ("MEMQ_MUST", "必含"),
+                      ("MEMQ_NOT", "排除"), ("MEMQ_SINCE", "起始"),
+                      ("MEMQ_AFTER", "晚于"), ("MEMQ_BEFORE", "早于"),
+                      ("MEMQ_CAFTER", "创建≥"), ("MEMQ_CBEFORE", "创建≤"),
+                      ("MEMQ_MAFTER", "修改≥"), ("MEMQ_MBEFORE", "修改≤"),
+                      ("MEMQ_TAG", "标签")):
+        v = g(env)
+        if v:
+            parts.append(f"{name}={v}")
+    return " · ".join(parts)
+
+def count_mode(q, n):
+    c = connect()
+    scored = query_rows(c, q, 10 ** 6)
+    files = {}
+    layers = {}
+    for _s, body, path, layer, line, *_ in scored:
+        files[str(path)] = files.get(str(path), 0) + 1
+        layers[layer] = layers.get(layer, 0) + 1
+    d = _filter_desc()
+    print(f"「{q}」命中 {len(scored)} 段 / {len(files)} 个文件" + (f"   （{d}）" if d else ""))
+    if not scored:
+        return
+    print("  按层：" + " · ".join(f"{k} {v}" for k, v in sorted(layers.items(), key=lambda x: -x[1])))
+    top = sorted(files.items(), key=lambda x: -x[1])[:8]
+    for path, k in top:
+        print(f"    {k:>4} 段  {str(path).replace(str(HOME), '~')}")
+    if len(files) > 8:
+        print(f"    …另有 {len(files) - 8} 个文件")
+    if len(scored) > n:
+        print(f"  → 现在取前 {n} 条；想更准就加 --must / --cat / --path 再筛一次")
+
+DOC_LEVEL_LAYERS = {"docs", "skills", "bin"}
+
+def collapse_by_doc(rows):
+    seen, out = {}, []
+    for row in rows:
+        layer = str(row[3] or "")
+        if layer not in DOC_LEVEL_LAYERS:
+            out.append((row, 1))
+            continue
+        key = str(row[2])
+        if key in seen:
+            seen[key][1] += 1
+            continue
+        rec = [row, 1]
+        seen[key] = rec
+        out.append(rec)
+    return out
+
+_INTRO_CACHE = {}
+
+def intro_of(path, limit=300):
+    if path in _INTRO_CACHE:
+        return _INTRO_CACHE[path]
+    txt = ""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            txt = fh.read(4000)
+        m = re.match(r"^---\r?\n[\s\S]*?\r?\n---\r?\n", txt)
+        if m:
+            txt = txt[m.end():]
+        txt = re.sub(r"^\s*#{1,3}[^\n]*\n+", "", txt)
+        txt = re.sub(r"\s+", " ", txt).strip()[:limit]
+    except Exception:
+        txt = ""
+    _INTRO_CACHE[path] = txt
+    return txt
+
+def search(q, n=8):
+    c = connect()
+    q = q.strip()
+    scored = query_rows(c, q, n * 12)
+    _loose = False
+    if not scored and os.environ.get("MEMQ_MIN_WCOV") is None:
+        os.environ["MEMQ_MIN_WCOV"] = "0.10"
+        scored = query_rows(c, q, n * 12)
+        _loose = bool(scored)
+    if not scored:
+        print(f"（没有找到「{q}」）")
+        return
+    if _loose:
+        print("（⚠️ 宽松匹配：正常门槛 0 条，降到 0.10 重搜——结果可能不准，当线索看）")
+    d = _filter_desc()
+    if d:
+        print(f"（筛选：{d}）")
+    show_why = os.environ.get("MEMQ_WHY") == "1"
+    folded = collapse_by_doc(scored)[:n]
+    for row, seg_n in folded:
+        score, body, path, layer, line = row[0], row[1], row[2], row[3], row[4]
+        rest = row[5:]
+        short = str(path).replace(str(HOME), "~")
+        is_doc = str(layer or "") in DOC_LEVEL_LAYERS
+        if is_doc:
+            tag = f"（整篇{(' · 命中 ' + str(seg_n) + ' 段') if seg_n > 1 else ''}）"
+            print(f"\n[{layer_label(layer, path)}] {short}:{int(line) if line is not None else 0} {tag}")
+        else:
+            print(f"\n[{layer_label(layer, path)}] {short}:{int(line) if line is not None else 0}")
+        _raw = re.sub(r"\n+", " ", body).strip()
+        if is_doc and (re.match(r"^\s*(?:---|title:|description:|name:)", _raw) or len(_raw) < 60):
+            snippet = intro_of(str(path)) or _raw
+        else:
+            snippet = _raw
+        print("  " + (snippet[:300] + "…" if len(snippet) > 300 else snippet))
+        if show_why and rest and rest[0]:
+            print(f"  ↳ 得分 {score:.0f} · {rest[0]}")
+    _log_access([f"{r[2]}:{int(r[4])}" for r, _n in folded])
+
+_CAT_CACHE = {}
+
+def front_category(path):
+    if path in _CAT_CACHE:
+        return _CAT_CACHE[path]
+    _CAT_CACHE[path] = ""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for _ in range(12):
+                line = fh.readline()
+                if not line:
+                    break
+                m = re.match(r'^category:\s*"?([^"\n]+)"?', line)
+                if m:
+                    _CAT_CACHE[path] = m.group(1).strip()
+                    break
+    except Exception:
+        pass
+    return _CAT_CACHE[path]
+
+def layer_label(layer, path):
+    if layer in ("docs", "skills"):
+        c = front_category(path)
+        if c:
+            return f"{layer}/{c}"
+    return layer
+
+def pack(q, n=10, budget=None):
+    n = int(os.environ.get("MEMQ_PACK_N", n))
+    budget = int(os.environ.get("MEMQ_BUDGET") or budget or 6000)
+    _snip = int(os.environ.get("MEMQ_SNIPPET") or 800)
+    c = connect()
+    picked, used, per_file, seen = [], 0, {}, set()
+
+    def harvest(rows, cap):
+        nonlocal used
+        got = 0
+        for score, body, path, layer, line, *_ in rows:
+            if got >= cap or len(picked) >= n:
+                break
+            if (path, line) in seen:
+                continue
+            _cap = 1 if str(layer or "") in DOC_LEVEL_LAYERS else 2
+            if per_file.get(path, 0) >= _cap:
+                continue
+            snippet = re.sub(r"\s+", " ", body).strip()[:_snip]
+            if used + len(snippet) > budget:
+                break
+            per_file[path] = per_file.get(path, 0) + 1
+            picked.append((score, layer, path, line, snippet))
+            seen.add((path, line))
+            used += len(snippet)
+            got += 1
+
+    harvest(query_rows(c, q, n * 5), max(1, n - 2))
+    if len(picked) < n:
+        _old = os.environ.get("MEMQ_MIN_WCOV")
+        os.environ["MEMQ_MIN_WCOV"] = "0.12"
+        try:
+            harvest(query_rows(c, q, n * 5), n - len(picked))
+        finally:
+            if _old is None:
+                os.environ.pop("MEMQ_MIN_WCOV", None)
+            else:
+                os.environ["MEMQ_MIN_WCOV"] = _old
+    if not picked:
+        print(f"（没有找到「{q}」相关内容）"); return
+    picked.sort(key=lambda x: -x[0])
+    print(f"## 记忆简报：{q}\n")
+    for _sc, layer, path, line, snippet in picked:
+        short = str(path).replace(str(HOME), "~")
+        if str(layer or "") in DOC_LEVEL_LAYERS:
+            print(f"- [{layer_label(layer, path)}] {short}（整篇）\n  {(intro_of(str(path)) or snippet)}")
+        else:
+            print(f"- [{layer_label(layer, path)}] {short}:{int(line) if line is not None else 0}\n  {snippet}")
+    print(f"\n（{len(picked)} 段 / {used} 字符；原始出处见路径行号）")
+    try:
+        _f = _env_filters()
+        if "chunks_record" not in _tables(_f):
+            _ws = [t for t in re.split(r"\s+", q.strip()) if len(t) >= 2][:3]
+            if _ws:
+                _sql = "SELECT COUNT(*) FROM chunks_record WHERE " + " OR ".join(
+                    ["instr(body, ?) > 0"] * len(_ws))
+                _n = connect().execute(_sql, _ws).fetchone()[0]
+                if _n:
+                    print(f"💡 冷区（`archived/`）还有 {_n} 段含这些词 —— 加 `--all` 才查")
+    except Exception:
+        pass
+    _log_access([f"{p}:{int(_li)}" for _s, _l, p, _li, _sn in picked])
+
+def stats():
+    c = connect()
+    n_files = c.execute("SELECT COUNT(*) FROM files").fetchone()[0]
+    n_chunks = sum(c.execute("SELECT COUNT(*) FROM " + _t).fetchone()[0] for _t in _ALL_TABLES)
+    print(f"索引：{n_files} 个文件 / {n_chunks} 段  → {DB}")
+    for layer, cnt in c.execute("SELECT layer, COUNT(*) FROM files GROUP BY layer ORDER BY 2 DESC"):
+        print(f"  {layer:8s} {cnt}")
+    _snip = int(os.environ.get("MEMQ_SNIPPET") or 800)
+    n_long = sum(c.execute("SELECT COUNT(*) FROM " + _t + " WHERE length(body)>?", (_snip,)).fetchone()[0] for _t in _ALL_TABLES)
+    if n_long:
+        pct = n_long * 100.0 / max(1, n_chunks)
+        flag = "  ⚠️ 超过 10%，考虑调 MEMQ_SNIPPET 或 hard" if pct > 10 else ""
+        print(f"  长段      {n_long} 段超过 {_snip} 字（{pct:.1f}%，摘要只显示前半截）{flag}")
+
+def layers():
+    for layer, files, weight in LAYERS:
+        print(f"{layer}（权重 {weight}）")
+        for f in files[:6]:
+            print("   ", str(f).replace(str(HOME), "~"))
+        if len(files) > 6:
+            print(f"    …共 {len(files)} 个")
+
+if __name__ == "__main__":
+    a = sys.argv[1:]
+    if not a:
+        print(__doc__); sys.exit(0)
+    if a[0] == "--index":
+        index(); sys.exit(0)
+    if a[0] == "--stats":
+        stats(); sys.exit(0)
+    if a[0] == "--layers":
+        layers(); sys.exit(0)
+    if a[0] == "--layers-json":
+        print(json.dumps({layer: [str(p) for p in files] for layer, files, _w in LAYERS},
+                         ensure_ascii=False))
+        sys.exit(0)
+    for flag, env in (("--layer", "MEMQ_LAYER"), ("--must", "MEMQ_MUST"),
+                      ("--not", "MEMQ_NOT"), ("--path", "MEMQ_PATH"),
+                      ("--cat", "MEMQ_CAT"), ("--since", "MEMQ_SINCE"),
+                      ("--after", "MEMQ_AFTER"), ("--before", "MEMQ_BEFORE"),
+                      ("--created-after", "MEMQ_CAFTER"), ("--created-before", "MEMQ_CBEFORE"),
+                      ("--modified-after", "MEMQ_MAFTER"), ("--modified-before", "MEMQ_MBEFORE"),
+                      ("--tag", "MEMQ_TAG"),
+                      ("--min-importance", "MEMQ_MIN_IMP"), ("--max-importance", "MEMQ_MAX_IMP")):
+        if flag in a:
+            i = a.index(flag)
+            os.environ[env] = a[i + 1]
+            a = a[:i] + a[i + 2:]
+    if "--all" in a:
+        a = [x for x in a if x != "--all"]
+        os.environ["MEMQ_ALL"] = "1"
+    if not a:
+        a = [""]
+    if a[0] == "--pack":
+        pack(" ".join(a[1:]) or "最近的结论"); sys.exit(0)
+    if "--why" in a:
+        os.environ["MEMQ_WHY"] = "1"
+        a = [x for x in a if x != "--why"]
+    if "--count" in a:
+        a = [x for x in a if x != "--count"]
+        count_mode(" ".join(a) or "最近的结论", 20)
+        sys.exit(0)
+    n = 20
+    if "-n" in a:
+        i = a.index("-n"); n = int(a[i+1]); a = a[:i] + a[i+2:]
+    search(" ".join(a), n)

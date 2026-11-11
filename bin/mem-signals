@@ -1,0 +1,202 @@
+#!/usr/bin/env python3
+
+import json
+import math
+import os
+import sys
+import time
+from collections import defaultdict
+from pathlib import Path
+
+HOME = Path.home()
+CACHE = HOME / ".dsh" / "cache"
+ACCESS_LOG = CACHE / "mem-access.jsonl"
+SIGNALS = CACHE / "mem-signals.json"
+ROTATE_LINES = 5000
+
+DEFAULT_IMPORTANCE = 50
+DEFAULT_RECENCY = 1.0
+DEFAULT_MATURITY = "draft"
+ACCESS_BONUS = 3
+DECAY_IMPORTANCE = 0.995
+DECAY_RECENCY_DAYS = 30
+PROMOTE_TO_CORE = 85
+PROMOTE_TO_VALIDATED = 65
+DEMOTE_FROM_CORE = 60
+DEMOTE_FROM_VALIDATED = 35
+
+DAY_MS = 86_400_000
+
+def determine_tier(importance, current):
+    if importance >= PROMOTE_TO_CORE:
+        return "core"
+    if importance >= PROMOTE_TO_VALIDATED and current == "draft":
+        return "validated"
+    if current == "core" and importance < DEMOTE_FROM_CORE:
+        return "validated"
+    if current == "validated" and importance < DEMOTE_FROM_VALIDATED:
+        return "draft"
+    return current
+
+def read_hits():
+    pass
+def read_hits(include_test=False):
+    all_hits = defaultdict(list)
+    new_hits = defaultdict(list)
+    n_lines = bad = skipped = 0
+    cursor = (load_old().get("__meta__") or {}).get("lastLine", 0)
+    if not ACCESS_LOG.exists():
+        return all_hits, new_hits, 0, 0, 0
+    with open(ACCESS_LOG, encoding="utf-8", errors="replace") as f:
+        for i, line in enumerate(f):
+            line = line.strip()
+            if not line:
+                continue
+            n_lines += 1
+            try:
+                rec = json.loads(line)
+            except Exception:
+                bad += 1
+                continue
+            if not include_test and rec.get("src") == "test":
+                skipped += 1
+                continue
+            t = int(rec.get("t") or 0)
+            for p in rec.get("paths") or []:
+                all_hits[str(p)].append(t)
+                if i >= cursor:
+                    new_hits[str(p)].append(t)
+    return all_hits, new_hits, n_lines, bad, skipped
+
+def _file_of(key):
+    s = str(key)
+    if ":" in s:
+        head, _, tail = s.rpartition(":")
+        if tail.isdigit() or tail.replace(".", "", 1).isdigit():
+            return head
+    return s
+
+def load_old():
+    try:
+        return json.loads(SIGNALS.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def aggregate(write=True, include_test=False):
+    hits, fresh_hits, n_lines, bad, skipped = read_hits(include_test)
+    old = load_old()
+    now = int(time.time() * 1000)
+
+    out = {}
+    all_keys = list(dict.fromkeys(list(hits.keys()) + [k for k in old if k != "__meta__"]))
+    for path in all_keys:
+        ts = hits.get(path) or []
+        prev = old.get(path) or {}
+        imp = float(prev.get("importance", DEFAULT_IMPORTANCE))
+        maturity = prev.get("maturity", DEFAULT_MATURITY)
+        last_calc = int(prev.get("computedAt") or 0)
+
+        if last_calc:
+            days = max(0.0, (now - last_calc) / DAY_MS)
+            imp *= DECAY_IMPORTANCE ** days
+
+        imp = min(100.0, imp + ACCESS_BONUS * len(fresh_hits.get(path, [])))
+
+        last_access = max(ts) if ts else int(prev.get("lastAccess") or 0)
+        recency = math.exp(-max(0.0, (now - last_access) / DAY_MS) / DECAY_RECENCY_DAYS)
+
+        out[path] = {
+            "accessCount": int(prev.get("accessCount", 0)) + len(fresh_hits.get(path, [])),
+            "importance": round(imp, 2),
+            "maturity": determine_tier(imp, maturity),
+            "recency": round(recency, 4),
+            "lastAccess": last_access,
+            "computedAt": now,
+        }
+
+    gone = [p for p in out if p != "__meta__" and not Path(_file_of(p)).exists()]
+    for p in gone:
+        out.pop(p, None)
+
+    out["__meta__"] = {"lastLine": n_lines, "computedAt": now}
+
+    rotated = None
+    if write and n_lines >= ROTATE_LINES:
+        try:
+            rotated = CACHE / f"mem-access.jsonl.{time.strftime('%Y%m%d-%H%M%S')}"
+            ACCESS_LOG.rename(rotated)
+            out["__meta__"]["lastLine"] = 0
+            out["__meta__"]["rotatedTo"] = str(rotated)
+        except Exception:
+            rotated = None
+
+    if write and out:
+        CACHE.mkdir(parents=True, exist_ok=True)
+        tmp = SIGNALS.with_suffix(".tmp")
+        tmp.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+        tmp.replace(SIGNALS)
+
+    return out, {"lines": n_lines, "bad": bad, "gone": len(gone), "now": now,
+                 "skipped": skipped, "rotated": rotated}
+
+def shortpath(p):
+    parts = Path(_file_of(p)).parts
+    if len(parts) > 1 and parts[-2] == ".dsh":
+        return parts[-1]
+    return "/".join(parts[-2:]) if len(parts) > 1 else (parts[0] if parts else p)
+
+def show():
+    data = load_old()
+    if not data:
+        print("还没有 signals（先跑 mem-signals 聚合一次）")
+        return 0
+    data = {k: v for k, v in data.items() if k != "__meta__"}
+    rows = sorted(data.items(), key=lambda kv: -kv[1]["importance"])
+    print(f"共 {len(rows)} 条记忆有信号\n")
+    print(f"{'importance':>10} {'层级':<10} {'访问':>5} {'新鲜度':>7}  文件")
+    print("─" * 78)
+    for path, s in rows[:30]:
+        print(f"{s['importance']:>10.1f} {s['maturity']:<10} {s['accessCount']:>5} "
+              f"{s['recency']:>7.3f}  {shortpath(path)}")
+    tiers = defaultdict(int)
+    for s in data.values():
+        tiers[s["maturity"]] += 1
+    print(f"\n层级分布：{dict(tiers)}")
+    return 0
+
+def main():
+    if "--show" in sys.argv:
+        return show()
+    stats_only = "--stats" in sys.argv
+    include_test = "--include-test" in sys.argv
+    data, meta = aggregate(write=not stats_only, include_test=include_test)
+
+    print(f"访问日志 {meta['lines']} 行（坏行 {meta['bad']}"
+          + (f" · 跳过测试 {meta['skipped']} 行" if meta.get("skipped") else "")
+          + ")")
+    n_real = len([k for k in data if k != "__meta__"])
+    print(f"聚合出 {n_real} 条记忆信号"
+          + (f" · 清掉 {meta['gone']} 条已不存在的路径" if meta["gone"] else "")
+          + (f" · 日志已轮转到 {os.path.basename(str(meta['rotated']))}"
+             if meta.get("rotated") else ""))
+    if stats_only:
+        return 0
+    if not data:
+        print("（日志还是空的——先用 memq 查几次）")
+        return 0
+
+    real = {k: v for k, v in data.items() if k != "__meta__"}
+    tiers = defaultdict(int)
+    for v in real.values():
+        tiers[v["maturity"]] += 1
+    top = sorted(real.items(), key=lambda kv: -kv[1]["importance"])[:5]
+    print(f"层级分布：{dict(tiers)}")
+    print("\n最重要的 5 条：")
+    for path, s in top:
+        print(f"  {s['importance']:>5.1f} {s['maturity']:<10} {s['accessCount']:>3}次  "
+              f"{shortpath(path)}")
+    print(f"\n→ {SIGNALS}")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
