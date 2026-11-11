@@ -1,1 +1,6 @@
+# 由 build-release.sh 生成，别手改（下次 build 会覆盖）
+node_modules/
+.DS_Store
+*.log
+# npm pack 的产物（本地试装用，不进仓库）
 *.tgz

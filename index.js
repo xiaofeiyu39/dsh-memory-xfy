@@ -1115,7 +1115,8 @@ function search(db, query, limit, layer, opts) {
       if (cov3 < need2) continue
       let exact3 = 0
       for (const t of syn) if (t.length >= 2 && low3.includes(t.toLowerCase())) exact3++
-      const s3 = 18 + cov3 * 4 + exact3 * 15 + r.weight * 6 - r.body.length / 2000
+
+      const s3 = 10 + cov3 * 3 + exact3 * 6 + r.weight * 3 - r.body.length / 2000
       scored.push({ ...r, score: s3, synHit: syn.slice(0, 3).join('/') })
     }
   }
