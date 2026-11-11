@@ -1,6 +1,6 @@
 - insert:
     - id: memory-xfy
-      name: '@local/dsh-memory-xfy'
+      name: 'dsh-memory-xfy'
       config:
         home: ''
         dbPath: ''
