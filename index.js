@@ -1122,7 +1122,7 @@ function search(db, query, limit, layer, opts) {
     }
 
     synHits.sort((a, b) => b.score - a.score)
-    scored.push(...synHits.slice(0, 4))
+    scored.push(...synHits.slice(0, 3))
   }
 
   const perFile = 2
