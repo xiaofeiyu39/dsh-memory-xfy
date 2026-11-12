@@ -1094,6 +1094,7 @@ function search(db, query, limit, layer, opts) {
     const sqb = new Set(bigrams(syn.join(' ')).map((b) => b.toLowerCase()))
     const need2 = Math.min(sqb.size, Math.max(1, Math.floor(sqb.size * 0.5)))
     const synRows = []
+    const synHits = []
     for (const t of tablesFor(lf, zone)) {
       synRows.push(...db.prepare(`SELECT body, path, layer, line, weight, '${t}' AS tbl FROM ${t}`).all())
     }
@@ -1117,8 +1118,11 @@ function search(db, query, limit, layer, opts) {
       for (const t of syn) if (t.length >= 2 && low3.includes(t.toLowerCase())) exact3++
 
       const s3 = 10 + cov3 * 3 + exact3 * 6 + r.weight * 3 - r.body.length / 2000
-      scored.push({ ...r, score: s3, synHit: syn.slice(0, 3).join('/') })
+      synHits.push({ ...r, score: s3, synHit: syn.slice(0, 3).join('/') })
     }
+
+    synHits.sort((a, b) => b.score - a.score)
+    scored.push(...synHits.slice(0, 4))
   }
 
   const perFile = 2
