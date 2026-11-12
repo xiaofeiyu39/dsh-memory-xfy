@@ -64,52 +64,55 @@ in \`skills/\`; anything you only need when *looking something up* belongs in \`
 `)
 
 put('docs/welcome.md', `---
-title: Welcome to dsh-memory-xfy
-description: What this plugin does, how memory is layered, and how to search it well
+title: 欢迎使用 dsh-memory-xfy
+description: 这个插件干什么、记忆怎么分层、怎么搜才准、热区冷区怎么分
 category: getting-started
-keywords: welcome start intro memory layers search
+keywords: welcome start intro memory layers search 记忆 分层 检索 搜索 入门 介绍 热区 冷区
 ---
 
-## What this plugin does
+## 这个插件干什么
 
-It makes your notes **findable** without stuffing them into every prompt.
+让你的笔记**搜得到**，又不用每轮都塞进 prompt。
 
-Files are the source of truth. SQLite is only an index. Search is on demand.
+**文件是唯一真相源**，SQLite 只是索引。搜索是按需的——用到才查，查了才进上下文。
 
-## The layers
+## 记忆分层（memory layers）
 
-| Layer | What belongs there | How often you need it |
+| 层 | 放什么 | 什么时候用 |
 |---|---|---|
-| \`rules\` | Rules you obey every turn (\`AGENTS.md\`) | every turn |
-| \`docs\` | Conclusions, principles, how-things-work | when looking something up |
-| \`skills\` | Step-by-step runbooks, gotchas | when doing something |
-| \`daily\` | What happened today, round by round | during retro |
-| \`logs\` | Change log, outbound log | during retro |
-| \`reviews\` | Periodic self-review | during retro |
+| \`rules\` | 每轮都要守的规矩（\`AGENTS.md\`） | 每轮 |
+| \`docs\` | 结论、原理、怎么办 | 查资料时 |
+| \`skills\` | 分步骤的操作手册、踩过的坑 | 动手时 |
+| \`daily\` | 今天做了什么，一轮一个文件 | 复盘时 |
+| \`logs\` | 改动日志、对外发布日志 | 复盘时 |
+| \`reviews\` | 定期自省 | 复盘时 |
 
-Rule of thumb: **used every turn → rules; used when doing → skills; used when
-looking up → docs; only used in retro → stream.**
+一句话：**每轮都用 → rules；动手才用 → skills；查资料才用 → docs；只有复盘才用 → 流水层。**
 
-## How to search well
+> English: used every turn → \`rules\`; used when doing → \`skills\`; used when looking
+> up → \`docs\`; only in retro → \`daily\` / \`logs\` / \`reviews\`.
 
-Give it **facts, not questions** — memory stores facts, not intents.
+## 怎么搜才准（how to search well）
+
+给**关键事实词**，别用疑问句——记忆里存的是事实，不是意图。
 
 \`\`\`
-✅ "compaction 256k 117k"
-❌ "how much did compaction save today"
+✅ "压缩 256k 117k"
+❌ "今天压缩降了多少"
 \`\`\`
 
-One zero-result search proves nothing. Retry with synonyms; only two empty
-searches mean it is really absent.
+一次搜不到不代表没有。**换个同义词再搜**，两次都空才算真没有。
 
-## Hot vs cold
+## 热区与冷区（hot vs cold）
 
-Layers with a \`window\` (e.g. \`daily\` 3 days) keep recent files hot. Older files
-are physically moved into \`archived/\` — **file location is the hot/cold state**.
-Cold entries are still searchable: tick **Cold memory** in the panel.
+带 \`window\` 的层（比如 \`daily\` 3 天）近期文件留在**热区**，更老的物理搬进 \`archived/\`
+—— **文件位置就是冷热状态**。冷区仍然搜得到：面板里勾上「冷区记忆」。
 
-> \`archived/\` is **not a layer**, it is a path prefix. A file moved there keeps its
-> original layer name.
+> \`archived/\` **不是一层**，是路径前缀。搬进去的文件层名不变。
+
+> English: layers with a \`window\` keep recent files hot; older ones move into
+> \`archived/\`. File location **is** the hot/cold state. Cold entries stay searchable
+> (tick **Cold memory** in the panel). \`archived/\` is not a layer, just a path prefix.
 `)
 
 put('skills/example-skill/SKILL.md', `---
