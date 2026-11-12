@@ -7,7 +7,7 @@ Files are the single source of truth; SQLite is only an index. Retrieve on deman
 
 > It is not about making the model remember *more*. It is about **making memory findable**.
 >
-> Measured: ~900 files, ~7,900 chunks · hot index rebuild **0.16 s** · panel search ~60 ms.
+> Measured 2026-11-12: **~1,000 files, ~8,900 chunks** (6,400 hot + 2,500 cold) · hot index rebuild **0.16 s** · panel search ~60 ms. Numbers grow with use; these are magnitudes.
 
 ---
 
