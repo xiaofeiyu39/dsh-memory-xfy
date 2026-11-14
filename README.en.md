@@ -188,7 +188,7 @@ The directories in `layers.json` don't exist, or contain no `.md` files. Write a
 ## Status
 
 - Version `1.0.0`, used daily on DSH `0.2.2-rc.1`
-- Retrieval quality: 8 rounds of zero-target blind tests, questions all taken from real user utterances (not self-authored quiz items)
+- Retrieval quality: **61/62 (98%)** on zero-target blind tests, questions all taken from real user utterances (not self-authored quiz items) — measured 2026-11-14
 - Two implementations (CLI scripts / plugin routes) are guarded by `parity-check`, 12 cases compared one by one
 
 **First install:** run `npx -y -p dsh-memory-xfy dsh-memory-init`. It scaffolds a minimal working structure under `~/.dsh/` — all six layers get one real, readable file, so the panel has something to show on first open. **Existing files are never overwritten** (`--force` to overwrite, `--dir` to target another directory).
