@@ -16,7 +16,10 @@
 `bin/` 下还有两个 Python 脚本（跟面板**同一套设计**、共用同一份 `layers.json`）：
 
 ```bash
-cp bin/memq bin/mem-signals ~/.dsh/bin/ && chmod +x ~/.dsh/bin/memq ~/.dsh/bin/mem-signals
+# 从 npm 装的，bin/ 在 node_modules/dsh-memory-xfy/bin/；git clone 的直接就是 bin/
+cp node_modules/dsh-memory-xfy/bin/memq ~/.dsh/bin/
+cp node_modules/dsh-memory-xfy/bin/mem-signals ~/.dsh/bin/
+chmod +x ~/.dsh/bin/memq ~/.dsh/bin/mem-signals
 
 memq "关键词" -n 8      # 命令行检索
 memq --pack "任务描述"  # 生成记忆简报

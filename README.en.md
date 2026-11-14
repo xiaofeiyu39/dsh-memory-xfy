@@ -16,7 +16,10 @@ Files are the single source of truth; SQLite is only an index. Retrieve on deman
 `bin/` also ships two Python scripts — **same design** as the panel, sharing the same `layers.json`:
 
 ```bash
-cp bin/memq bin/mem-signals ~/.dsh/bin/ && chmod +x ~/.dsh/bin/memq ~/.dsh/bin/mem-signals
+# installed from npm? bin/ lives at node_modules/dsh-memory-xfy/bin/; git clone → bin/
+cp node_modules/dsh-memory-xfy/bin/memq ~/.dsh/bin/
+cp node_modules/dsh-memory-xfy/bin/mem-signals ~/.dsh/bin/
+chmod +x ~/.dsh/bin/memq ~/.dsh/bin/mem-signals
 
 memq "keyword" -n 8      # search from the terminal
 memq --pack "task"       # build a memory brief
