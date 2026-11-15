@@ -269,10 +269,27 @@ function chunkText(text, target = 400, hard = 1600) {
 
 const STOP = new Set(['怎么', '如何', '什么', '为什么', '哪个', '哪些', '是否', '可以', '需要', '我们', '现在', '的', '了', '吗', '呢', '吧'])
 
+// 只拿 >=2 字的停用词当分隔符（单字「的/了/吗」切太碎）。
+// 按长度倒序排，保证「为什么」先于「什么」匹配。
+const STOP_SPLIT = new RegExp(
+  [...STOP].filter((w) => w.length >= 2).sort((a, b) => b.length - a.length).join('|'))
+
 function termsOf(q) {
   const parts = String(q || '').split(/[\s，。、；：？！,.;:?!（）()\[\]"'“”‘’]+/).filter(Boolean)
-  let out = parts.filter((t) => t.length >= 2 && !STOP.has(t))
-  if (!out.length && q) out = [String(q).trim()]
+  // 必须是 let：下面「去掉尾巴词」之后要整体换掉（out = stripped ...）。
+  // 段 1 写成了 const，node --check 查不出来，运行时才崩「Assignment to constant variable」。
+  let out = []
+  for (const t of parts) {
+    // 🔴 2026-11-15：**没有标点的长句会整段进来**，再被下面的 4-gram 展开成跨词边界的碎片
+    // （「备份为什么失败」→ 备份为什 / 为什么失 / 么失败，一个都不在正文里）。
+    // 先用 >=2 字的停用词当分隔符切一遍。`bin/memq` 的 Python 版同步改过，两边必须一致
+    // （`bin/parity-check` 盯着）。
+    for (const sub of t.trim().split(STOP_SPLIT)) {
+      const s = sub.trim()
+      if (s.length >= 2 && !STOP.has(s)) out.push(s)
+    }
+  }
+  if (!out.length && q) out.push(String(q).trim())
 
   const TAIL = ['多少', '多久', '什么时候', '什么样', '怎么样', '是什么', '哪里', '几个', '几次', '了吗', '呢', '吧', '的', '了']
 
