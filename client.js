@@ -21,7 +21,6 @@ window.__ModuleLoader__.load({
     const MS_PANEL = {
       position: 'absolute', top: '100%', left: 0, marginTop: 3, zIndex: 60,
       minWidth: 150, maxHeight: 230, overflow: 'auto', borderRadius: 6, padding: '3px 0',
-
       border: '1px solid ' + LINE, background: 'Canvas', color: 'CanvasText',
       boxShadow: '0 8px 24px rgba(0,0,0,.18)',
     }
@@ -29,7 +28,6 @@ window.__ModuleLoader__.load({
     const DT_GRP = { display: 'inline-flex', gap: 4, alignItems: 'center', whiteSpace: 'nowrap' }
     const DT_LABEL = { opacity: 0.55, fontSize: 11 }
     const DT_IN = {
-
       flex: '0 0 auto', minWidth: 0, width: 132, padding: '3px 6px', borderRadius: 6,
       border: '1px solid ' + LINE, background: 'transparent', color: 'inherit',
       font: 'inherit', fontSize: 11.5,
@@ -114,7 +112,6 @@ window.__ModuleLoader__.load({
         h(React.Fragment, null, renderInline(txt, 'p' + (k++))))
       while (i < lines.length) {
         const line = lines[i]
-
         if (/^```/.test(line.trim())) {
           const buf = []
           i++
@@ -124,12 +121,10 @@ window.__ModuleLoader__.load({
           continue
         }
         if (!line.trim()) { i++; continue }
-
         if (/^-{3,}$/.test(line.trim())) {
           out.push(h('hr', { key: 'hr' + (k++), style: { border: 'none', borderTop: '1px solid ' + LINE, margin: '12px 0' } }))
           i++; continue
         }
-
         const hm = line.match(/^(#{1,6})\s+(.*)$/)
         if (hm) {
           const lv = hm[1].length
@@ -140,7 +135,6 @@ window.__ModuleLoader__.load({
           }, h(React.Fragment, null, renderInline(hm[2], 'h' + k))))
           i++; continue
         }
-
         if (/^>\s?/.test(line)) {
           const buf = []
           while (i < lines.length && /^>\s?/.test(lines[i])) { buf.push(lines[i].replace(/^>\s?/, '')); i++ }
@@ -148,7 +142,6 @@ window.__ModuleLoader__.load({
             h(React.Fragment, null, renderInline(buf.join(' '), 'q' + k))))
           continue
         }
-
         if (/^[-*+]\s+/.test(line)) {
           const items = []
           while (i < lines.length && /^[-*+]\s+/.test(lines[i])) { items.push(lines[i].replace(/^[-*+]\s+/, '')); i++ }
@@ -158,7 +151,6 @@ window.__ModuleLoader__.load({
               h(React.Fragment, null, renderInline(t, 'ul' + kk + '-' + j))))))
           continue
         }
-
         if (/^\d+\.\s+/.test(line)) {
           const items = []
           while (i < lines.length && /^\d+\.\s+/.test(lines[i])) { items.push(lines[i].replace(/^\d+\.\s+/, '')); i++ }
@@ -168,7 +160,6 @@ window.__ModuleLoader__.load({
               h(React.Fragment, null, renderInline(t, 'ol' + kk + '-' + j))))))
           continue
         }
-
         const buf = []
         while (i < lines.length && lines[i].trim()
           && !/^(#{1,6}\s|[-*+]\s|\d+\.\s|>|```|-{3,}$)/.test(lines[i])) { buf.push(lines[i]); i++ }
@@ -191,7 +182,6 @@ window.__ModuleLoader__.load({
 
     function Node(props) {
       const { depth, label, meta, open, active, leaf, onClick, onLabelClick, onFolderClick, title, dim } = props
-
       const stop = (fn) => (e) => { e.stopPropagation(); if (fn) fn() }
       const [hover, setHover] = React.useState(false)
       return h('div', {
@@ -215,7 +205,6 @@ window.__ModuleLoader__.load({
           style: { flex: '0 0 10px', opacity: 0.5 },
           onClick: onLabelClick ? stop(onClick) : undefined,
         }, leaf ? '·' : (open ? '▾' : '▸')),
-
         h('span', {
           style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                    opacity: dim ? 0.55 : undefined },
@@ -299,12 +288,9 @@ window.__ModuleLoader__.load({
     function MetaCard({ meta, human, machine, onSave, busy }) {
       const [edit, setEdit] = React.useState(false)
       const [showMachine, setShowMachine] = React.useState(false)
-
       const [descOpen, setDescOpen] = React.useState(true)
-
       const [kwAll, setKwAll] = React.useState(false)
       const [form, setForm] = React.useState({ title: '', description: '', category: '', keywords: '' })
-
       React.useEffect(() => {
         if (!meta) { setForm({ title: '', description: '', category: '', keywords: '' }); setEdit(false); return }
         setForm({
@@ -321,7 +307,6 @@ window.__ModuleLoader__.load({
         marginBottom: 8, fontSize: 11.5, display: 'flex', flexDirection: 'column', gap: 4,
       }
       const lab = { opacity: 0.5, fontSize: 11, flex: '0 0 52px' }
-
       const inp = {
         flex: 1, minWidth: 0, padding: '4px 8px', borderRadius: 6, fontSize: 12,
         border: '1px solid ' + LINE, background: 'transparent', color: 'inherit', font: 'inherit',
@@ -359,9 +344,7 @@ window.__ModuleLoader__.load({
       }
       const kws = Array.isArray(meta.keywords) ? meta.keywords : String(meta.keywords || '').split(/\s+/).filter(Boolean)
       return h('div', { style: box },
-
         h('div', { style: { display: 'flex', gap: 5, alignItems: 'center', minWidth: 0 } },
-
           h('div', {
             key: 'kws',
             style: {
@@ -380,7 +363,6 @@ window.__ModuleLoader__.load({
               }, kwAll ? T('收起') : '…')
             : null,
           h('span', { key: 'sp', style: { flex: '0 0 8px' } }),
-
           meta.created_at ? h('span', { key: 'ct', style: { opacity: 0.45, fontSize: 10.5, whiteSpace: 'nowrap' } }, T('创建 ') + fmtTs(meta.created_at)) : null,
           meta.updated_at ? h('span', { key: 'ut', style: { opacity: 0.45, fontSize: 10.5, whiteSpace: 'nowrap' } }, T('修改 ') + fmtTs(meta.updated_at)) : null,
           meta.status ? h('span', { key: 'st', style: { opacity: 0.45, fontSize: 10.5, whiteSpace: 'nowrap' } }, meta.status) : null,
@@ -388,7 +370,6 @@ window.__ModuleLoader__.load({
             key: 'b', style: { ...btn, padding: '1px 8px', opacity: 0.7 },
             onClick: () => setEdit(true), title: T('改标题/分类/关键词/简介'),
           }, '✎')),
-
         meta.description
           ? h('div', { key: 'desc' },
               h('span', {
@@ -421,28 +402,21 @@ window.__ModuleLoader__.load({
       const [q, setQ] = React.useState('')
       const [hits, setHits] = React.useState(null)
       const [total, setTotal] = React.useState(0)
-
       const [coldHits, setColdHits] = React.useState(0)
-
       const [hitsCollapsed, setHitsCollapsed] = React.useState(false)
       const searchLimit = 200
-
       const DEFAULT_LAYERS = []
       const [fLayers, setFLayers] = React.useState(DEFAULT_LAYERS)
-
       const [fZone, setFZone] = React.useState(['hot'])
       const [fCats, setFCats] = React.useState([])
-
       const [fCAfter, setFCAfter] = React.useState('')
       const [fCBefore, setFCBefore] = React.useState('')
       const [fMAfter, setFMAfter] = React.useState('')
       const [fMBefore, setFMBefore] = React.useState('')
-
       const [dtType, setDtType] = React.useState({ cA: 'text', cB: 'text', mA: 'text', mB: 'text' })
 
       const [fMinImp, setFMinImp] = React.useState('')
       const [fMaxImp, setFMaxImp] = React.useState('')
-
       const [filtersOpen, setFiltersOpen] = React.useState(false)
       const [fTags, setFTags] = React.useState([])
       const [tagInput, setTagInput] = React.useState('')
@@ -461,24 +435,19 @@ window.__ModuleLoader__.load({
       const [orig, setOrig] = React.useState('')
       const [notice, setNotice] = React.useState('')
       const [confirmDel, setConfirmDel] = React.useState(false)
-
       const [preview, setPreview] = React.useState(true)
 
       const safeMd = React.useMemo(() => {
         try {
-
           let t = String(draft)
-
           if (/^\s*---\r?\n/.test(t)) {
             const fm = /^\s*---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(t)
             if (fm) t = t.slice(fm[0].length)
           }
-
           const stem = String((sel && sel.path) || '').replace(/\/SKILL\.md$/, '').split('/').pop()
           if (stem) {
             t = t.replace(/^\s*#{1,2}\s+([^\n]*)\n+/, (m, title) => (title.includes(stem) ? '' : m))
           }
-
           if (sel && sel.mode === 'file') t = t.replace(/^\s*#\s+[^\n]*\n+/, '')
           if (window.__MEMDBG__) console.log('[MEMDBG]', JSON.stringify({ mode: sel && sel.mode, path: sel && sel.path, stem, head: String(t).slice(0, 60) }))
           return renderMd(t)
@@ -540,10 +509,8 @@ window.__ModuleLoader__.load({
               path, index: -1, mode: 'file',
               meta: d.meta || null, human: d.human || [], machine: d.machine || [],
               importance: d.importance,
-
               raw: !!d.raw,
             })
-
             setDraft(d.meta ? (d.body || '') : d.content)
             setOrig(d.meta ? (d.body || '') : d.content)
             setPreview(true)
@@ -564,9 +531,7 @@ window.__ModuleLoader__.load({
       }
       const revealInFinder = (p) => hostCall('reveal', p)
       const openWithDefault = (p) => hostCall('open', p)
-
       const openRaw = (p) => hostCall('raw', p, T('正在用 Chrome 打开原文…'))
-
       const copyPath = async (p) => {
         try {
           await navigator.clipboard.writeText(p)
@@ -638,13 +603,11 @@ window.__ModuleLoader__.load({
           const d = await r.json()
           setNotice(d.ok ? (d.message || T('已转区')) : (d.error || T('转区失败')))
           if (d.ok) {
-
             setSel(null); setDraft(''); setOrig('')
             loadTree(); loadStats()
           }
         } catch (e) { setNotice(T('请求失败：') + e) } finally { setBusy(false) }
       }
-
       const snipMove = async (action) => {
         if (!sel) return
         setBusy(true)
@@ -703,7 +666,6 @@ window.__ModuleLoader__.load({
       }
 
       const doSearch = async (n) => {
-
         const anyFilter = fLayers.length || fCats.length || fTags.length
           || fMinImp || fMaxImp || fCAfter || fCBefore || fMAfter || fMBefore
         if (!q.trim() && !anyFilter) { setNotice(T('搜索词和筛选条件都是空的')); return }
@@ -711,7 +673,6 @@ window.__ModuleLoader__.load({
         setHitsCollapsed(false)
         try {
           const lim = n || searchLimit
-
           const inlineMust = []
           let qClean = q.trim()
           qClean = qClean.replace(/["“”「」]([^"“”「」]+)["“”「」]/g, (_m, inner) => {
@@ -724,12 +685,9 @@ window.__ModuleLoader__.load({
             if (p.startsWith('+') && p.length > 1) inlineMust.push(p.slice(1))
           }
           qClean = parts.filter((p) => !(p.startsWith('+') && p.length > 1)).join(' ')
-
           if (!qClean && !inlineMust.length && !anyFilter) { setNotice(T('搜索词和筛选条件都是空的')); setBusy(false); return }
           const qs = new URLSearchParams({ q: qClean, n: String(lim) })
-
           if (fLayers.length) qs.set('layer', fLayers.join(','))
-
           qs.set('zone', fZone.length === 0 ? 'none' : fZone.length === 1 ? fZone[0] : 'both')
           if (fCats.length) qs.set('category', fCats.join(','))
           if (fCAfter.trim()) qs.set('createdAfter', fCAfter.trim())
@@ -739,7 +697,6 @@ window.__ModuleLoader__.load({
           if (fTags.length) qs.set('tags', fTags.join(','))
           if (fMinImp) qs.set('minimp', fMinImp)
           if (fMaxImp) qs.set('maximp', fMaxImp)
-
           const mustAll = inlineMust.join(' ')
           if (mustAll) qs.set('must', mustAll)
           const r = await fetch('/memory-xfy/search?' + qs.toString())
@@ -757,7 +714,6 @@ window.__ModuleLoader__.load({
         lastZone.current = zoneSig
         if (hits === null) return
         doSearch()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [zoneSig])
 
       const S = {
@@ -784,7 +740,6 @@ window.__ModuleLoader__.load({
           padding: '7px 10px', borderRadius: 8, border: '1px solid ' + LINE,
           fontSize: 12, lineHeight: 1.5, wordBreak: 'break-word', cursor: 'pointer',
         },
-
         chip: {
           display: 'inline-flex', alignItems: 'center', gap: 4,
           padding: '2px 10px', borderRadius: 999, border: '1px solid ' + LINE,
@@ -817,7 +772,6 @@ window.__ModuleLoader__.load({
       }
 
       const layerText = stats && stats.ok ? (stats.layers || []).map((l) => l.layer + ' ' + l.n).join(' · ') : ''
-
       const ZONES = [
         { k: 'hot', label: T('热区记忆'), hint: T('近期流水 + 全部结论层。默认选中') },
         { k: 'cold', label: T('冷区记忆'), hint: T('超窗口的旧流水 + 搬进 archived/ 的归档（层名不变，路径自己编码冷热）。默认不选，点开就重搜') },
@@ -841,7 +795,6 @@ window.__ModuleLoader__.load({
 
       const resetAll = () => {
         setQ(''); setHits(null); setTotal(0); setColdHits(0); setHitsCollapsed(false)
-
         setFZone(['hot'])
         setFLayers(DEFAULT_LAYERS)
         setFCats([]); setFTags([])
@@ -851,18 +804,15 @@ window.__ModuleLoader__.load({
       }
       const dirty = sel && draft !== orig
       const baseName = (p) => String(p).split('/').slice(-1)[0]
-
       const shortPath = (p) => String(p || '').replace(/^\/Users\/[^/]+/, '~')
       const labelOf = (p) => {
         if (tree) for (const L of tree) for (const F of L.files) if (F.path === p) return F.label || F.name
         return baseName(p)
       }
-
       const zoneOf = (p) => {
         if (tree) for (const L of tree) for (const F of L.files) if (F.path === p) return F.zone || 'hot'
         return 'hot'
       }
-
       const ZonePill = (z, key) => h('span', {
         key,
         style: {
@@ -883,7 +833,6 @@ window.__ModuleLoader__.load({
             .filter((L) => !fLayers.length || fLayers.includes(L.layer))
             .map((L) => ({
               ...L,
-
               files: L.files
                 .filter((F) => fZone.includes(F.zone || 'hot'))
                 .filter((F) => (hitPathSet ? hitPathSet.has(F.path) : true)),
@@ -905,13 +854,10 @@ window.__ModuleLoader__.load({
           treeRows.push(h(Node, {
             key: lk, depth: 0, label: L.layer, meta: L.files.length + T(' 个文件'),
             open: lopen, onClick: () => toggle(lk),
-
             onFolderClick: L.dir ? () => revealInFinder(L.dir) : undefined,
           }))
           if (!lopen) continue
-
           const flat = !!L.flat
-
           const buckets = new Map()
           for (const F of L.files) {
             const g = F.group || ''
@@ -924,7 +870,6 @@ window.__ModuleLoader__.load({
             if (g) {
               const gk = 'G:' + L.layer + ':' + g
               const gopen = open[gk] !== false
-
               const gdir = (files.find((f) => f.groupDir) || {}).groupDir || ''
               treeRows.push(h(Node, {
                 key: gk, depth: 1, label: g, meta: files.length + T(' 个'),
@@ -941,13 +886,11 @@ window.__ModuleLoader__.load({
               if (!flat) {
                 treeRows.push(h(Node, {
                   key: fk, depth: fdepth, label: F.label || F.name,
-
                   meta: F.entries.length > 1
                     ? F.entries.length + T(' 条')
                     : String(F.chars || 0),
                   open: fopen, onClick: () => toggle(fk),
                   onLabelClick: () => openFile(F.path),
-
                   dim: F.zone === 'cold' && fZone.length > 1,
                   title: (F.zone === 'cold' ? T('【冷区归档】') : '') + F.path + T('（点名字看整篇，点三角展开）'),
                 }))
@@ -978,7 +921,6 @@ window.__ModuleLoader__.load({
       }, zoneOf(sel.path) === 'cold' ? T('⬆️ 提到热区') : T('⬇️ 提到冷区')) : null
 
       if (!sel) {
-
         editor = h('div', { style: { opacity: 0.62, fontSize: 13, lineHeight: 1.75, padding: '6px 2px' } },
           h(React.Fragment, null, renderMd(
             T('左边点开任意一条记忆，这里就能看到原文，**默认渲染成带层级的排版**。\n\n')
@@ -987,21 +929,16 @@ window.__ModuleLoader__.load({
             + T('- `**粗体**`、行内代码、列表、引用、代码块都会正常显示\n')
             + T('- 长文档可以直接往下滚，不用挤在小窗里'))))
       } else if (sel.mode === 'file') {
-
         editor = [
           h('div', { key: 'head', style: { display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', fontSize: 12.5 } },
-
             h('span', {
               key: 't',
               style: { flex: '1 1 100%', opacity: 0.78, lineHeight: 1.45, wordBreak: 'break-word' },
               title: labelOf(sel.path),
             }, (sel.meta && (sel.meta.title || sel.meta.name)) || labelOf(sel.path)),
-
             h('span', { style: { opacity: 0.4 } }, String(draft.length)),
             h(ScoreBadge, { key: 'sc', value: sel.importance }),
-
             ZonePill(zoneOf(sel.path), 'zn'),
-
             h('span', {
               key: 'p', style: {
                 flex: 1, minWidth: 0, opacity: 0.42, fontSize: 11.5,
@@ -1011,7 +948,6 @@ window.__ModuleLoader__.load({
               title: T('点击复制完整路径\n') + sel.path,
               onClick: () => copyPath(sel.path),
             }, shortPath(sel.path)),
-
             sel.raw ? h('button', {
               key: 'raw', style: { ...S.button, padding: '4px 11px', fontSize: 12, opacity: 0.8 },
               title: T('用 Chrome 打开这一轮的**完整原始对话**（原文，未经压缩）'),
@@ -1082,9 +1018,7 @@ window.__ModuleLoader__.load({
               }),
           h('div', { key: 'btns', style: S.row },
             h('button', { style: S.button, onClick: doSave, disabled: busy || !dirty }, dirty ? T('保存') : T('已保存')),
-
             zoneBtn,
-
             (sel.index >= 0 && !String(sel.path).includes('/archived/'))
               ? h('button', {
                   key: 'snip',
@@ -1130,7 +1064,6 @@ window.__ModuleLoader__.load({
         h('div', { style: S.row },
           h('span', { style: S.stat }, T('文件 '), stats && stats.ok ? stats.files : '—'),
           h('span', { style: S.stat }, T('片段 '), stats && stats.ok ? stats.chunks : '—'),
-
           stats && stats.ok
             ? zoneButtons
             : h('span', { style: { fontSize: 12, opacity: 0.55 } },
@@ -1143,7 +1076,6 @@ window.__ModuleLoader__.load({
             onChange: (e) => setQ(e.target.value),
             onKeyDown: (e) => { if (e.key === 'Enter') doSearch() },
           }),
-
           h('button', {
             style: {
               ...S.button, fontSize: 11.5, padding: '2px 9px', flex: '0 0 auto',
@@ -1152,7 +1084,6 @@ window.__ModuleLoader__.load({
             title: nF ? fBits.join(' · ') : T('高级搜索：层 / 分类 / 重要 / tag / 创建·修改时间'),
             onClick: () => setFiltersOpen(!filtersOpen),
           }, (filtersOpen ? '▾' : '▸') + T(' 筛选') + (nF ? ' · ' + nF : '')),
-
           hits === null ? null : h('span', {
             style: { fontSize: 11.5, flex: '0 0 auto', opacity: 0.75, whiteSpace: 'nowrap' },
             title: T('左树已同步只显示命中的文件；点「刷新」恢复初始条件'),
@@ -1162,9 +1093,7 @@ window.__ModuleLoader__.load({
           h('button', { style: S.button, onClick: () => doSearch(), disabled: busy }, busy ? '…' : T('检索')),
         ),
         filtersOpen ? h(React.Fragment, null,
-
         h('div', { style: { display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', fontSize: 11.5 } },
-
           h(MultiSelect, {
             allLabel: T('全部层'),
             value: fLayers,
@@ -1175,7 +1104,6 @@ window.__ModuleLoader__.load({
             allLabel: T('全部分类'), value: fCats, onChange: setFCats,
             options: [T('技能'), T('DSH本体'), T('桌面'), T('社交'), T('借鉴'), T('循环'), T('上下文')],
           }),
-
           h('div', { key: 'grp-i', style: DT_GRP },
             h('span', { style: DT_LABEL }, T('重要')),
             h('input', {
@@ -1191,7 +1119,6 @@ window.__ModuleLoader__.load({
               style: { ...DT_IN, width: 58 },
               value: fMaxImp, onChange: (e) => setFMaxImp(e.target.value),
             })),
-
           h('div', {
             style: {
               position: 'relative', display: 'inline-flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
@@ -1220,7 +1147,6 @@ window.__ModuleLoader__.load({
               },
               onChange: (e) => { setTagInput(e.target.value); setTagOpen(true) },
               onFocus: () => setTagOpen(true),
-
               onBlur: () => setTimeout(() => setTagOpen(false), 160),
               onKeyDown: (e) => {
                 if (e.key === 'Enter') {
@@ -1257,10 +1183,8 @@ window.__ModuleLoader__.load({
               }, h('span', null, o.tag), h('span', { style: { opacity: 0.45 } }, o.n))))
             })() : null,
           ),
-
           ),
           h('div', { key: 'filter-row2', style: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', fontSize: 11.5 } },
-
           h('div', { key: 'grp-c', style: DT_GRP },
             h('span', { style: DT_LABEL }, T('创建')),
             h('input', {
@@ -1324,12 +1248,10 @@ window.__ModuleLoader__.load({
         ) : null,
         hits === null ? null : (hits.length === 0
           ? h('div', { style: { fontSize: 12, opacity: 0.6 } }, T('没有命中。换个说法，或用同义词/英文名/报错原文再试。'))
-
           : h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6, maxHeight: full ? 220 : 'none', minHeight: 0 } },
             h('div', { style: { fontSize: 11.5, opacity: 0.5, display: 'flex', gap: 10, alignItems: 'center', flex: '0 0 auto' } },
               hitsCollapsed
                 ? h('button', {
-
                     style: { ...S.button, fontSize: 11.5, padding: '2px 10px', marginLeft: 'auto' },
                     onClick: () => setHitsCollapsed(false),
                   }, T('← 返回结果列表（') + hits.length + T(' 条') + (total > hits.length ? T(' · 共 ') + total : '') + '）')
@@ -1348,17 +1270,14 @@ window.__ModuleLoader__.load({
                           onClick: () => doSearch(99999), disabled: busy,
                         }, T('显示全部 ') + total + T(' 条'))
                       : null,
-
                     h('button', {
                       style: { ...S.button, fontSize: 11.5, padding: '2px 8px', opacity: 0.95, marginLeft: 'auto' },
                       onClick: () => setHitsCollapsed(true),
                       title: T('收起结果栏（结果不丢，点「返回结果列表」还在）'),
                     }, T('✕ 收起')))),
             hitsCollapsed ? null : h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6, overflow: 'auto', minHeight: 0 } },
-
               hits.map((x, i) => h('div', {
                 key: i, style: S.hit,
-
                 onClick: () => (x.docLevel ? openFile(x.full || x.path) : openItem(x.full || x.path, x.index || 0)),
                 onMouseEnter: (e) => { e.currentTarget.style.background = HILITE },
                 onMouseLeave: (e) => { e.currentTarget.style.background = 'transparent' },
@@ -1366,11 +1285,9 @@ window.__ModuleLoader__.load({
                 h('div', { style: { opacity: 0.6, marginBottom: 3, display: 'flex', gap: 8, alignItems: 'baseline' } },
                   h('span', null, '[' + x.layer + '] ' + x.path + (x.docLevel ? '' : ':' + x.line)),
                   x.docLevel
-
                     ? h('span', { style: { opacity: 0.5, whiteSpace: 'nowrap' } }, x.segCount > 1 ? T('命中 ') + x.segCount + T(' 段') : '')
                     : null,
                   (typeof x.imp === 'number' ? h('span', { style: { opacity: 0.55, whiteSpace: 'nowrap' } }, T('重要 ') + Math.round(x.imp)) : null),
-
                   ZonePill(x.zone || 'hot', 'zn')),
                 x.segTitle ? h('div', { style: { fontWeight: 600, marginBottom: 2 } }, x.segTitle) : null,
                 h('div', null, x.snippet),
@@ -1389,12 +1306,10 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots', 'locale'],
       apply(ctx) {
-
         if (ctx.locale && typeof ctx.locale.register === 'function') {
           ctx.effect(() => ctx.locale.register('memoryXfy', { zh: UI_ZH, en: UI_EN }))
           T = ctx.locale.bind('memoryXfy')
         }
-
         const stopSidebar = ctx.slots.inject('main', () => ctx.slots.inject('sidebar.panellist', () => {
           const offMain = ctx.slots.register({
             name: 'main',
@@ -1411,7 +1326,6 @@ window.__ModuleLoader__.load({
             if (typeof offIcon === 'function') offIcon()
           }
         }))
-
         const stopSettings = ctx.slots.inject('settings.section', () => ctx.slots.register({
           name: 'settings.section', id: 'memory-xfy', order: 60,
           label: () => T('记忆'),

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""mem-signals —— 把访问日志聚合成「记忆重要性」信号（AKL 的 sidecar）"""
 
 import json
 import math
@@ -19,8 +18,8 @@ DEFAULT_IMPORTANCE = 50
 DEFAULT_RECENCY = 1.0
 DEFAULT_MATURITY = "draft"
 ACCESS_BONUS = 3
-DECAY_IMPORTANCE = 0.995      # 每天
-DECAY_RECENCY_DAYS = 30       # recency 的半衰尺度
+DECAY_IMPORTANCE = 0.995
+DECAY_RECENCY_DAYS = 30
 PROMOTE_TO_CORE = 85
 PROMOTE_TO_VALIDATED = 65
 DEMOTE_FROM_CORE = 60
@@ -28,9 +27,7 @@ DEMOTE_FROM_VALIDATED = 35
 
 DAY_MS = 86_400_000
 
-
 def determine_tier(importance, current):
-    """带滞回的层级判定——照抄原实现（升 core 是无条件的，降级才有保护）。"""
     if importance >= PROMOTE_TO_CORE:
         return "core"
     if importance >= PROMOTE_TO_VALIDATED and current == "draft":
@@ -41,11 +38,9 @@ def determine_tier(importance, current):
         return "draft"
     return current
 
-
 def read_hits():
-    """返回 (全量 hits, 新增 hits, 总行数, 坏行数)。"""
+    pass
 def read_hits(include_test=False):
-    """读访问日志，返回 (全量命中, 新命中, 总行数, 坏行数, 跳过的测试行数)。"""
     all_hits = defaultdict(list)
     new_hits = defaultdict(list)
     n_lines = bad = skipped = 0
@@ -73,9 +68,7 @@ def read_hits(include_test=False):
                     new_hits[str(p)].append(t)
     return all_hits, new_hits, n_lines, bad, skipped
 
-
 def _file_of(key):
-    """`path:line` → `path`；老数据（只有 path）原样返回。"""
     s = str(key)
     if ":" in s:
         head, _, tail = s.rpartition(":")
@@ -83,13 +76,11 @@ def _file_of(key):
             return head
     return s
 
-
 def load_old():
     try:
         return json.loads(SIGNALS.read_text(encoding="utf-8"))
     except Exception:
         return {}
-
 
 def aggregate(write=True, include_test=False):
     hits, fresh_hits, n_lines, bad, skipped = read_hits(include_test)
@@ -135,7 +126,6 @@ def aggregate(write=True, include_test=False):
             rotated = CACHE / f"mem-access.jsonl.{time.strftime('%Y%m%d-%H%M%S')}"
             ACCESS_LOG.rename(rotated)
             out["__meta__"]["lastLine"] = 0
-            # 归档没人读（本脚本只读当前 ACCESS_LOG），当场压掉——明文一天涨 12M。
             gz = rotated.with_name(rotated.name + ".gz")
             try:
                 import gzip
@@ -145,28 +135,25 @@ def aggregate(write=True, include_test=False):
                 rotated.unlink()
                 rotated = gz
             except Exception:
-                pass                    # 压不动就留明文，不影响归档本身
+                pass
             out["__meta__"]["rotatedTo"] = str(rotated)
         except Exception:
-            rotated = None          # 归档失败就别动游标，宁可日志长着
+            rotated = None
 
     if write and out:
         CACHE.mkdir(parents=True, exist_ok=True)
         tmp = SIGNALS.with_suffix(".tmp")
         tmp.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
-        tmp.replace(SIGNALS)          # 原子替换：写一半崩了也不会留坏文件
+        tmp.replace(SIGNALS)
 
     return out, {"lines": n_lines, "bad": bad, "gone": len(gone), "now": now,
                  "skipped": skipped, "rotated": rotated}
 
-
 def shortpath(p):
-    """显示用路径：末两段，别只给 basename。"""
     parts = Path(_file_of(p)).parts
     if len(parts) > 1 and parts[-2] == ".dsh":
-        return parts[-1]                      # ~/.dsh/AGENTS.md → AGENTS.md
+        return parts[-1]
     return "/".join(parts[-2:]) if len(parts) > 1 else (parts[0] if parts else p)
-
 
 def show():
     data = load_old()
@@ -186,7 +173,6 @@ def show():
         tiers[s["maturity"]] += 1
     print(f"\n层级分布：{dict(tiers)}")
     return 0
-
 
 def main():
     if "--show" in sys.argv:
@@ -221,7 +207,6 @@ def main():
               f"{shortpath(path)}")
     print(f"\n→ {SIGNALS}")
     return 0
-
 
 if __name__ == "__main__":
     _rc = main()

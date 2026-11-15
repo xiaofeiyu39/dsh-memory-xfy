@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""memq —— 记忆检索：一条命令在「所有记忆层」里找东西。
-
-用法:
-  memq "关键词" [-n 8]       检索（≥3 字符走 FTS5，2 字符走 LIKE 兜底）
-  memq --pack "任务描述"     任务简报：最相关的几段压成一段
-  memq --index               增量重建索引（改了文件后跑）
-  memq --stats / --layers    看索引规模和层
-  memq --why "词"            0 条时诊断哪个词库里没有
-"""
 import os, sys, sqlite3, hashlib, time, re, json, pathlib, math, ast
 from datetime import date
 
@@ -24,9 +15,7 @@ try:
 except Exception as e:
     sys.exit(f"❌ 读不到层定义 {_LAYERS_JSON}：{e}")
 
-
 def _load_layers():
-    """从 layers.json 生成 LAYERS：[(层名, [Path], 权重)]。"""
     out = []
     for L in _LAYERS_CFG.get("layers", []):
         files = []
@@ -34,7 +23,7 @@ def _load_layers():
             fp = HOME / ".dsh" / f
             if fp.exists():
                 files.append(fp)
-        exts = L.get("exts")            # None = 不限后缀
+        exts = L.get("exts")
         only = set(L.get("only_names") or [])
         exn = set(L.get("exclude_names") or [])
         exp = tuple(L.get("exclude_prefixes") or [])
@@ -42,7 +31,7 @@ def _load_layers():
         exc = tuple(L.get("exclude_contains") or [])
         exd = set(L.get("exclude_dirs") or [])
         ex_top = set(L.get("exclude_top_dirs") or [])
-        depth = int(L.get("depth", 9))   # 9=递归，1=只顶层
+        depth = int(L.get("depth", 9))
 
         def walk(dd, lvl, base):
             if lvl > depth:
@@ -86,23 +75,15 @@ def _load_layers():
         out.append((L["name"], sorted(set(files)), int(L.get("weight", 3))))
     return out
 
-
 LAYERS = _load_layers()
 
-CHUNK_TARGET = {"private": 800}
+CHUNK_TARGET = {}
 CHUNK_VERSION = "v2-priv800"
 
-
 def snippet_len():
-    """每段摘要显示多少字（`MEMQ_SNIPPET`，默认 800）。"""
     return int(os.environ.get("MEMQ_SNIPPET") or 800)
 
 def _script_notes(t):
-    """抽脚本里**所有说明文字**（# / // 行注释 + 三引号块 + /** */ 块注释），丢掉代码行。
-
-    Node 脚本用的是 // 和 /** */，只认 # 和三引号会把 bin/ 下 9 个 Node 工具的说明全抽空
-    —— 2026-11-14 发现：搜 `dead-fields`、`log-index` 都搜不到脚本本身。
-    """
     out = []
     for ln in t.splitlines():
         s = ln.strip()
@@ -117,25 +98,14 @@ def _script_notes(t):
         out.append(m.group(0))
     return "\n".join(x for x in out if x)
 
-
 def read_text(f):
-    """读记忆文件；.enc 走 private-crypt 解密（密钥在钥匙串 dsh-backup）。"""
     f = pathlib.Path(f)
-    if f.suffix == ".enc":
-        import subprocess
-        out = subprocess.run([str(HOME/".dsh/bin/private-crypt"), "dec", str(f)],
-                             capture_output=True, timeout=30)
-        if out.returncode != 0:
-            return None
-        return out.stdout.decode("utf-8", "replace")
-    in_script_dir = (str(f).startswith(str(HOME / ".dsh" / "bin") + "/")
-                     or str(f).startswith(str(HOME / ".dsh" / "telegram") + "/"))
+    in_script_dir = str(f).startswith(str(HOME / ".dsh" / "bin") + "/")
     if in_script_dir:
         if f.stat().st_size > 1_000_000:
             return ""
         return _script_notes(f.read_text(encoding="utf-8", errors="replace"))
     return f.read_text(encoding="utf-8", errors="replace")
-
 
 def connect():
     DB.parent.mkdir(parents=True, exist_ok=True)
@@ -156,11 +126,9 @@ def connect():
     return c
 
 FM_RE = re.compile(r"^---\n(.*?)\n---\n", re.S)
-FM_KEEP = ("title", "description", "keywords", "category", "name")   # 有检索价值的字段
-
+FM_KEEP = ("title", "description", "keywords", "category", "name")
 
 def _fm_head(text):
-    """把 frontmatter 里有检索价值的字段拼成「头部段」。"""
     m = FM_RE.match(text)
     if not m:
         return None, text
@@ -172,9 +140,7 @@ def _fm_head(text):
     rest = text[m.end():]
     return ("\n".join(head) if head else None), rest
 
-
 def chunk_text(text, target=400, hard=1600):
-    """按空行切段；太长的段再按句号切。返回 [(起始行号, 文本)]。"""
     fm = FM_RE.match(text)
     fm_lines = text[:fm.end()].count("\n") if fm else 0
     head, text = _fm_head(text)
@@ -225,9 +191,7 @@ SEC_HEAD_RE = re.compile(r"^#{1,3}\s+(.+)$")
 HHMM_RE = re.compile(r"^(\d{1,2}:\d{2})(?:\s*[~～\-—]\s*(\d{1,2}:\d{2}))?")
 DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 
-
 def _file_date(path, text, mtime):
-    """文件属于哪一天：路径里的日期 > frontmatter created_at > 文件 mtime。"""
     m = DATE_RE.search(str(path))
     if m:
         return m.group(1)
@@ -238,9 +202,7 @@ def _file_date(path, text, mtime):
             return m2.group(1)
     return time.strftime("%Y-%m-%d", time.localtime(mtime))
 
-
 def section_times(text, path, mtime):
-    """[(行号, 创建时间, 修改时间)] —— 按行号升序，最后一条兜住文件尾部。"""
     date = _file_date(path, text, mtime)
     fm_ts = fm_end = None
     fm = FM_RE.match(text)
@@ -248,7 +210,7 @@ def section_times(text, path, mtime):
         m1 = re.search(r'created_at:\s*"([^"]+)"', fm.group(1))
         m2 = re.search(r'updated_at:\s*"([^"]+)"', fm.group(1))
         if m1:
-            fm_ts = _pad_ts(m1.group(1)[:19].replace("T", " "))     # 截到秒（原来是 [:16] 到分钟）
+            fm_ts = _pad_ts(m1.group(1)[:19].replace("T", " "))
         if m2:
             fm_end = _pad_ts(m2.group(1)[:19].replace("T", " "))
     out = []
@@ -266,9 +228,7 @@ def section_times(text, path, mtime):
         out.append((1, fm_ts or _mt, max(filter(None, [fm_end, _mt]))))
     return out
 
-
 def _ts_of(secs, line):
-    """某一行属于哪个小节：取行号 ≤ line 的最后一个小节。"""
     ts = ts_end = None
     for sln, s_ts, s_end in secs:
         if sln <= line:
@@ -278,7 +238,6 @@ def _ts_of(secs, line):
     if ts is None and secs:
         ts, ts_end = secs[0][1], secs[0][2]
     return ts, ts_end
-
 
 def index(verbose=True):
     c = connect()
@@ -353,20 +312,13 @@ def index(verbose=True):
 
 STOP = {"怎么", "如何", "什么", "为什么", "哪个", "哪些", "是否", "可以", "需要", "我们", "现在", "的", "了", "吗", "呢", "吧"}
 
-# 只拿 >=2 字的停用词当分隔符（单字「的/了/吗」切太碎）。
-# 按长度倒序排，保证「为什么」先于「什么」匹配。
 _STOP_SPLIT = re.compile("|".join(
     sorted((w for w in STOP if len(w) >= 2), key=len, reverse=True)))
 
 def terms_of(q):
-    """把自然语言问题拆成检索词：按空白/标点切，去停用词，保留 ≥2 字。"""
     parts = re.split(r"[\s，。、；：？！,.;:?!（）()\[\]\"'“”‘’]+", q.strip())
     out = []
     for t in parts:
-        # 🔴 2026-11-15：**没有标点的长句会整段进来**，再被下面的 4-gram 展开成
-        # 跨词边界的碎片——「备份｜为什么｜失败」→ `备份为什` / `为什么失` / `么失败`，
-        # 三个都不在正文里，于是搜出来的全是别的文档（实测前 8 名没有那篇讲备份的）。
-        # 先用 >=2 字的停用词当分隔符切一遍，切成「备份」+「失败」两个词。
         for sub in _STOP_SPLIT.split(t.strip()):
             sub = sub.strip()
             if len(sub) >= 2 and sub not in STOP:
@@ -401,7 +353,6 @@ def terms_of(q):
     return expanded or out
 
 def bigrams(text):
-    """把中文串切成 2 字滑窗（英文/数字保留原词）。中文同义改写靠它兜底。"""
     out = []
     for run in re.findall(r"[\u4e00-\u9fff]+|[A-Za-z0-9_./-]+", text):
         if re.match(r"[\u4e00-\u9fff]", run):
@@ -411,33 +362,28 @@ def bigrams(text):
     return out
 
 def _log_access(paths, q=None):
-    """记一笔「这些路径刚被检索命中」——给 AKL 的 importance 用；`q` 是本次查询词。"""
     try:
         if not paths:
             return
         ACCESS_LOG.parent.mkdir(parents=True, exist_ok=True)
         rec = {"t": int(time.time() * 1000),
-               "src": os.environ.get("MEMQ_SRC", "cli"),           # cli / test / …
-               "paths": [str(p) for p in dict.fromkeys(paths)]}   # 去重、保序
+               "src": os.environ.get("MEMQ_SRC", "cli"),
+               "paths": [str(p) for p in dict.fromkeys(paths)]}
         if q and q.strip():
-            rec["q"] = q.strip()[:200]                             # 查询原文，截 200 字
+            rec["q"] = q.strip()[:200]
         with open(ACCESS_LOG, "a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     except Exception:
         pass
 
-
 def _pad_ts(v):
-    """把 'YYYY-MM-DD HH:MM' 补成 'YYYY-MM-DD HH:MM:SS'。"""
     if not v:
         return v
     if len(v) == 16:
         return v + ":00"
     return v
 
-
 def _norm_time(v, upper=False):
-    """把时间参数归一成 'YYYY-MM-DD HH:MM:SS'，好跟 chunk_ts 直接比字符串。"""
     v = (v or "").strip()
     if not v:
         return ""
@@ -452,12 +398,9 @@ def _norm_time(v, upper=False):
         return _pad_ts(f"{m.group(1)} {hms}")
     return v
 
-
 _SIG_CACHE = None
 
-
 def _importance(path, line=None, for_score=False):
-    """重要性（0~100），来自 mem-signals.json（AKL 的 sidecar）。"""
     global _SIG_CACHE
     if _SIG_CACHE is None:
         try:
@@ -483,12 +426,9 @@ def _importance(path, line=None, for_score=False):
     except Exception:
         return 50.0
 
-
 _SEG_SET = None
 
-
 def _has_seg_key(path):
-    """这个 path 在 signals 里有没有段级 key（`path:数字`）。预计算一次。"""
     global _SEG_SET
     if _SEG_SET is None:
         _SEG_SET = set()
@@ -498,9 +438,7 @@ def _has_seg_key(path):
                 _SEG_SET.add(k[:i])
     return path in _SEG_SET
 
-
 def _importance_old(path):
-    """文件级重要性（0~100），来自 mem-signals.json（AKL 的 sidecar）。"""
     global _SIG_CACHE
     if _SIG_CACHE is None:
         try:
@@ -513,12 +451,9 @@ def _importance_old(path):
     except Exception:
         return 50.0
 
-
 _TAG_CACHE = None
 
-
 def _tag_map(tags=None):
-    """兜底：`tags` 表空/不存在时，从各文件 frontmatter 现读一遍。"""
     want = list(tags or [])
     out = set()
     for _layer, files, _w in LAYERS:
@@ -541,11 +476,9 @@ def _tag_map(tags=None):
                 out.add(str(f))
     return out
 
-
 def _sync_tags_from_fm(c):
-    """从每个文件的 frontmatter 读**文件级** tag，灌进 `tags(path, tag)` 表。"""
     cols = [r[1] for r in c.execute("PRAGMA table_info(tags)")]
-    if cols and 'line' in cols:      # 老结构（带 line）→ 重建
+    if cols and 'line' in cols:
         c.execute("DROP TABLE tags")
         cols = []
     c.execute("""CREATE TABLE IF NOT EXISTS tags (
@@ -576,9 +509,7 @@ def _sync_tags_from_fm(c):
         c.executemany("INSERT OR IGNORE INTO tags(path, tag) VALUES (?,?)", rows)
     c.commit()
 
-
 def _tag_set(c, tags):
-    """从 mem.db 的 `tags` 表拿「带这些 tag 的**文件**」集合（多 tag 是 AND）。"""
     try:
         if not c.execute("SELECT COUNT(*) FROM tags").fetchone()[0]:
             return None
@@ -592,18 +523,14 @@ def _tag_set(c, tags):
         sets.append(got)
     return set.intersection(*sets) if sets else set()
 
-
 def _tag_ok(f, tagmap, path, line):
-    """tag 筛选：**文件级**——段属于带这个 tag 的文件就算命中。"""
     if not f["tag"]:
         return True
     if tagmap is None:
         return True
     return str(path) in tagmap
 
-
 def _tag_map():
-    """兜底：从 frontmatter 现读一遍（表不存在/刚清空时用）。tag → 文件集合。"""
     out = {}
     for _layer, files, _w in LAYERS:
         for f in files:
@@ -623,9 +550,7 @@ def _tag_map():
                         out.setdefault(t, set()).add(str(f))
     return out
 
-
 def _seg_count(c, path):
-    """一个文件在热区+冷区一共几段（tag 桥算权重用）。"""
     n = 0
     for _t in _ALL_TABLES:
         try:
@@ -634,9 +559,7 @@ def _seg_count(c, path):
             pass
     return n
 
-
 def _tag_bridge(c, q):
-    """查询里出现的 tag → {文件路径: 权重}。**语义桥，绕开字面重合。**"""
     if not q.strip():
         return {}
     ql = re.sub(r"\s+", "", q.lower())
@@ -661,22 +584,18 @@ def _tag_bridge(c, q):
                 out[p] = w
     return out
 
-
 def _ts_map(c):
-    """{(path, line): (创建时间, 修改时间)}，全表读进内存（4300 段，几十 KB，比 join 省事）。"""
     return {(p, ln): (ts, te) for p, ln, ts, te in
             c.execute("SELECT path, line, ts, ts_end FROM chunk_ts").fetchall()}
 
-
 def _time_ok(f, tsmap, path, line):
-    """按段级时间过滤。四个方向各自独立（2026-11-08 18:05 主人定的）。"""
     keys = ("created_after", "created_before", "modified_after", "modified_before", "after", "before")
     if not any(f[k] for k in keys):
         return True
     ts, te = tsmap.get((path, line), (None, None))
     if not ts:
-        return False          # 没时间的段，明确要时间范围时就排除
-    mod = te or ts            # 没改过 → 修改时间等于创建时间
+        return False
+    mod = te or ts
     if f["after"] and mod < f["after"]:
         return False
     if f["before"] and ts > f["before"]:
@@ -691,9 +610,7 @@ def _time_ok(f, tsmap, path, line):
         return False
     return True
 
-
 def _env_filters():
-    """把环境变量里的过滤条件读出来。"""
     g = lambda k: (os.environ.get(k) or "").strip()
     sp = lambda v: [w for w in re.split(r"[\s,]+", v) if w]
     _lay = set(sp(g("MEMQ_LAYER")))
@@ -717,20 +634,16 @@ def _env_filters():
         "maximp": float(g("MEMQ_MAX_IMP") or 100),
     }
 
-
 _RECORD_LAYERS = {"daily", "log"}
 _ALL_TABLES = ("chunks", "chunks_record")
 
 _HOT_WINDOW = {L["name"]: max(0, int(L["window"]))
                for L in _LAYERS_CFG.get("layers", []) if L.get("window") is not None}
 
-
 def _hot_window():
     return dict(_HOT_WINDOW)
 
-
 def _day_of(path):
-    """从路径里取日期：daily/2026-11-10/r016.md · logs/changelog/2026-11-10.md ·"""
     m = re.search(r"(\d{4})-(\d{2})-(\d{2})", str(path))
     if not m:
         return None
@@ -739,27 +652,21 @@ def _day_of(path):
     except ValueError:
         return None
 
-
 def _is_archived(path):
-    """路径里带 `archived/` 就是冷区 —— **不靠层名判断**（2026-11-10 16:1x 定的）。"""
     return "/archived/" in str(path)
 
-
 def _tbl_of(layer, path):
-    """这个文件该进哪张表 —— **按路径 + 按日期滚动**（2026-11-10 04:1x 定的）。"""
     if _is_archived(path):
-        return "chunks_record"          # 归档目录永远冷区
+        return "chunks_record"
     if layer not in _HOT_WINDOW:
-        return "chunks"                 # 结论层：rules/docs/skills/private/bin（含 telegram）
+        return "chunks"
     d = _day_of(path)
     if d is None:
         return "chunks"
     keep = _hot_window().get(layer, _HOT_WINDOW[layer])
     return "chunks" if (date.today() - d).days <= keep else "chunks_record"
 
-
 def _tables(f):
-    """按层筛选决定查哪张表。"""
     lay = f.get("layer")
     if f.get("all"):
         return ("chunks", "chunks_record")
@@ -769,9 +676,7 @@ def _tables(f):
         return ("chunks", "chunks_record")
     return ("chunks",)
 
-
 def _pass(f, body, path, layer, line=None):
-    """一条命中是否通过过滤。返回 (是否通过, 失败原因)。"""
     if f["layer"] and layer not in f["layer"]:
         return False, "layer"
     low = body.lower()
@@ -802,11 +707,9 @@ def _pass(f, body, path, layer, line=None):
             return False, "importance"
     return True, ""
 
-
 _SYN_CACHE = None
 
 def _syn_map():
-    """读同义词表，返回 {词: [同义词...]}（双向）。"""
     global _SYN_CACHE
     if _SYN_CACHE is not None:
         return _SYN_CACHE
@@ -822,9 +725,7 @@ def _syn_map():
     _SYN_CACHE = out
     return out
 
-
 def expand_synonyms(terms, raw=""):
-    """把查询里的词映射成同义词。"""
     m = _syn_map()
     if not m:
         return []
@@ -842,9 +743,7 @@ def expand_synonyms(terms, raw=""):
     lowset = tset | {q}
     return [x for x in dict.fromkeys(out) if x.lower() not in tset]
 
-
 def query_rows(c, q, limit):
-    """混合检索：英文/命令走 FTS5；中文走「2 字滑窗重合度」在 Python 里算。"""
     ts = terms_of(q)
     qb = set(b.lower() for b in bigrams(" ".join(ts)))
     ascii_terms = [t for t in ts if re.match(r"^[A-Za-z0-9_./-]+$", t)]
@@ -914,8 +813,6 @@ def query_rows(c, q, limit):
         _tag_hit = _tag_bridge(c, q)
     scored, seen = [], set()
     floor = 1 if len(qb) <= 1 else 2
-    # 层权重有两套：`weight`（layers.json 里配的，规则层最高）和这张流水层降权表。
-    # 前者管「这一层重不重要」，后者管「流水账天生不该压过结论」——语义不同，别合并。
     _LAYER_MUL = {"daily": 0.78, "log": 0.78, "reviews": 0.85}
     for body, path, layer, line, weight, low, hit in cand:
         if len(hit) < floor:
@@ -924,10 +821,10 @@ def query_rows(c, q, limit):
         if wcov < float(os.environ.get("MEMQ_MIN_WCOV", "0.25")):
             continue
         seen.add((path, line))
-        exact = sum(1 for t in ts if len(t) >= 2 and t in low)     # 原词逐字出现
+        exact = sum(1 for t in ts if len(t) >= 2 and t in low)
         ratio = len(hit) / max(1, len(qb))
         rel = ratio * 40 + len(hit) * 6 + exact * 25 - len(body) / 1500
-        _imp = _importance(path, line, for_score=True)     # 段级优先；排序用原值（不打折）
+        _imp = _importance(path, line, for_score=True)
         _wm = 1 + (weight - 3) * 0.06
         score = rel * _wm * (0.75 + 0.5 * _imp / 100.0)
         why = [f"覆盖 {len(hit)}/{len(qb)} 加权{wcov:.0%}", f"原词 {exact}"]
@@ -964,7 +861,7 @@ def query_rows(c, q, limit):
             why.append(f"重要 {imp:.0f}")
         scored.append((score, body, path, layer, line, " · ".join(why)))
     syn = expand_synonyms(ts, q)
-    _syn_hits = []      # 同义词路候选，限流后再并进 scored（见下面 _SYN_MAX）
+    _syn_hits = []
     if syn:
         sqb = set(b.lower() for b in bigrams(" ".join(syn)))
         if sqb:
@@ -994,7 +891,7 @@ def query_rows(c, q, limit):
         _syn_hits.sort(key=lambda x: -x[0])
         scored.extend(_syn_hits[:_SYN_MAX])
 
-    for body, path, layer, line, weight in rows:      # 合并 FTS 命中
+    for body, path, layer, line, weight in rows:
         if (path, line) in seen:
             continue
         if not _pass(f, body, path, layer, line)[0]:
@@ -1034,7 +931,6 @@ def query_rows(c, q, limit):
     return top[: max(limit * 2, 20)]
 
 def _filter_desc():
-    """当前生效的过滤条件，一行说清——不然我看不出「为什么只剩 3 条」。"""
     g = lambda k: (os.environ.get(k) or "").strip()
     parts = []
     for env, name in (("MEMQ_LAYER", "层"), ("MEMQ_CAT", "分类"),
@@ -1049,9 +945,7 @@ def _filter_desc():
             parts.append(f"{name}={v}")
     return " · ".join(parts)
 
-
 def count_mode(q, n):
-    """只报数量与分布，不返回正文。"""
     c = connect()
     scored = query_rows(c, q, 10 ** 6)
     files = {}
@@ -1072,12 +966,9 @@ def count_mode(q, n):
     if len(scored) > n:
         print(f"  → 现在取前 {n} 条；想更准就加 --must / --cat / --path 再筛一次")
 
-
 DOC_LEVEL_LAYERS = {"docs", "skills", "bin"}
 
-
 def collapse_by_doc(rows):
-    """段级命中 → 按文件折叠：docs/skills/bin 一个文件只留一条（分数最高的那段）。"""
     seen, out = {}, []
     for row in rows:
         layer = str(row[3] or "")
@@ -1093,12 +984,9 @@ def collapse_by_doc(rows):
         out.append(rec)
     return out
 
-
 _INTRO_CACHE = {}
 
-
 def intro_of(path, limit=300):
-    """整篇粒度要显示**正文开头**，不能显示 frontmatter。"""
     if path in _INTRO_CACHE:
         return _INTRO_CACHE[path]
     txt = ""
@@ -1115,9 +1003,7 @@ def intro_of(path, limit=300):
     _INTRO_CACHE[path] = txt
     return txt
 
-
 def explain_zero(c, q):
-    """解释「为什么一条都没有」——把第 88~94 轮挖清的机制直接算出来。"""
     ts = terms_of(q)
     qb = list(dict.fromkeys(b.lower() for b in bigrams(" ".join(ts))))
     tabs = _tables(_env_filters())
@@ -1164,7 +1050,6 @@ def explain_zero(c, q):
     print(f"      · 想确认某词到底有没有：`memq \"<单词>\"` 或 `memq --all \"<单词>\"`（冷区）")
     print()
 
-
 def search(q, n=8):
     c = connect()
     q = q.strip()
@@ -1186,8 +1071,6 @@ def search(q, n=8):
         print(f"（筛选：{d}）")
     show_why = os.environ.get("MEMQ_WHY") == "1"
     folded = collapse_by_doc(scored)[:n]
-    # 覆盖率低时提醒一句：命中的全是泛词也能凑出结果，别当成「找到了」。
-    # （ByteRover 的 OOD 是「分数低于阈值就说超出范围」；这里只加提示，不改排序）
     if not _loose and folded:
         _rest = folded[0][0][5:] or ("",)
         _m = re.search(r"覆盖 (\d+)/(\d+)", str(_rest[0]))
@@ -1219,9 +1102,7 @@ def search(q, n=8):
 
 _CAT_CACHE = {}
 
-
 def front_category(path):
-    """读 docs/skills 文件 frontmatter 里的 `category:`（只读前 12 行，带缓存）。"""
     if path in _CAT_CACHE:
         return _CAT_CACHE[path]
     _CAT_CACHE[path] = ""
@@ -1239,18 +1120,14 @@ def front_category(path):
         pass
     return _CAT_CACHE[path]
 
-
 def layer_label(layer, path):
-    """docs / skills 层带上 category：`docs/技能`。其他层原样。"""
     if layer in ("docs", "skills"):
         c = front_category(path)
         if c:
             return f"{layer}/{c}"
     return layer
 
-
 def pack(q, n=10, budget=None):
-    """把检索结果压成一段简报：按文件去重、每段截短，总长控制在 budget 字符内。"""
     n = int(os.environ.get("MEMQ_PACK_N", n))
     budget = int(os.environ.get("MEMQ_BUDGET") or budget or 6000)
     _snip = snippet_len()
@@ -1278,7 +1155,7 @@ def pack(q, n=10, budget=None):
             got += 1
 
     harvest(query_rows(c, q, n * 5), max(1, n - 2))
-    if len(picked) < n:                        # 没取满 → 放宽门槛再补
+    if len(picked) < n:
         _old = os.environ.get("MEMQ_MIN_WCOV")
         os.environ["MEMQ_MIN_WCOV"] = "0.12"
         try:
@@ -1321,8 +1198,8 @@ def pack(q, n=10, budget=None):
                 if _n:
                     print(f"💡 冷区（`archived/`）还有 {_n} 段含这些词 —— 加 `--all` 才查")
     except Exception:
-        pass   # 提示失败绝不能影响主结果
-    _log_access([f"{p}:{int(_li)}" for _s, _l, p, _li, _sn in picked], q)   # 段级，同 search()
+        pass
+    _log_access([f"{p}:{int(_li)}" for _s, _l, p, _li, _sn in picked], q)
 
 def stats():
     c = connect()

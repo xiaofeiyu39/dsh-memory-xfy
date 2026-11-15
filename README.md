@@ -6,8 +6,8 @@
 按需检索，不往每轮提示里塞东西。
 
 > 它解决的不是「让模型记住更多」，而是「**让记忆能被找到**」。
-> 实测（2026-11-14）：**1253 个文件、12042 段记忆**（热区 7568 + 冷区 4474），
-> 命令行检索 **0.10 秒**，面板搜索 ~60ms。数字会随使用增长，这里给的是量级。
+> 实测（2026-11-12）：**近 1000 个文件、约 8900 段记忆**（热区 6400 + 冷区 2500），
+> 热索引 **0.16 秒**，面板搜索 ~60ms。数字会随使用增长，这里给的是量级。
 
 ---
 
@@ -16,10 +16,7 @@
 `bin/` 下还有两个 Python 脚本（跟面板**同一套设计**、共用同一份 `layers.json`）：
 
 ```bash
-# 从 npm 装的，bin/ 在 node_modules/dsh-memory-xfy/bin/；git clone 的直接就是 bin/
-cp node_modules/dsh-memory-xfy/bin/memq ~/.dsh/bin/
-cp node_modules/dsh-memory-xfy/bin/mem-signals ~/.dsh/bin/
-chmod +x ~/.dsh/bin/memq ~/.dsh/bin/mem-signals
+cp bin/memq bin/mem-signals ~/.dsh/bin/ && chmod +x ~/.dsh/bin/memq ~/.dsh/bin/mem-signals
 
 memq "关键词" -n 8      # 命令行检索
 memq --pack "任务描述"  # 生成记忆简报
@@ -64,11 +61,8 @@ dsh plugin --profile web add /path/to/dsh-memory-xfy
 第一次装先跑一次：
 
 ```bash
-npx -y -p dsh-memory-xfy dsh-memory-init
+npx dsh-memory-init        # 或 node bin/init.js
 ```
-
-⚠️ 别直接写 `npx dsh-memory-init`：那样 npm 会去 registry 找一个**叫 `dsh-memory-init` 的包**
-（不存在，404）——它认的是包名，不是 bin 名。
 
 它会在 `~/.dsh/` 里建出六层、每层放一篇真实可读的内容（`AGENTS.md` / 一篇示例结论 / 一个示例技能 / 一篇日记 / 一篇复盘 / 一条改动流水），
 面板第一次打开就有东西看。**已存在的文件不覆盖**，你现有的记忆不会被碰。
@@ -190,11 +184,10 @@ npx -y -p dsh-memory-xfy dsh-memory-init
 ## 状态
 
 - 版本 `1.0.0`，在 DSH `0.2.2-rc.1` 上日常使用
-- 检索质量：零针对性盲测 **61/62（98%）**，问法全部取自真实用户原话（不是自己补的考题）
-  ——2026-11-14 实测
+- 检索质量：零针对性盲测 59/59（问法取自真实用户原话，不是自己补的考题）
 - 两套实现（命令行脚本 / 插件路由）有 `parity-check` 守着，12 用例逐条比对
 
-**首次安装**：跑一次 `npx -y -p dsh-memory-xfy dsh-memory-init`，会在 `~/.dsh/` 里生成一套最小可用的示例结构——六层各有一篇真实可读的内容，面板第一次打开就有东西看，**已存在的文件不覆盖**（覆盖加 `--force`，换目录加 `--dir`）。
+**首次安装**：跑一次 `npx dsh-memory-init`（或 `node bin/init.js`），会在 `~/.dsh/` 里生成一套最小可用的示例结构——六层各有一篇真实可读的内容，面板第一次打开就有东西看，**已存在的文件不覆盖**。
 
 ## 许可
 

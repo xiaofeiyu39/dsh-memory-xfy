@@ -7,7 +7,7 @@ Files are the single source of truth; SQLite is only an index. Retrieve on deman
 
 > It is not about making the model remember *more*. It is about **making memory findable**.
 >
-> Measured 2026-11-14: **1,253 files, 12,042 chunks** (7,568 hot + 4,474 cold) · CLI search **0.10 s** · panel search ~60 ms. Numbers grow with use; these are magnitudes.
+> Measured 2026-11-12: **~1,000 files, ~8,900 chunks** (6,400 hot + 2,500 cold) · hot index rebuild **0.16 s** · panel search ~60 ms. Numbers grow with use; these are magnitudes.
 
 ---
 
@@ -16,10 +16,7 @@ Files are the single source of truth; SQLite is only an index. Retrieve on deman
 `bin/` also ships two Python scripts — **same design** as the panel, sharing the same `layers.json`:
 
 ```bash
-# installed from npm? bin/ lives at node_modules/dsh-memory-xfy/bin/; git clone → bin/
-cp node_modules/dsh-memory-xfy/bin/memq ~/.dsh/bin/
-cp node_modules/dsh-memory-xfy/bin/mem-signals ~/.dsh/bin/
-chmod +x ~/.dsh/bin/memq ~/.dsh/bin/mem-signals
+cp bin/memq bin/mem-signals ~/.dsh/bin/ && chmod +x ~/.dsh/bin/memq ~/.dsh/bin/mem-signals
 
 memq "keyword" -n 8      # search from the terminal
 memq --pack "task"       # build a memory brief
@@ -64,11 +61,8 @@ Restart DSH. A **Memory** entry appears in the sidebar, or open `http://127.0.0.
 On a fresh install, run this once:
 
 ```bash
-npx -y -p dsh-memory-xfy dsh-memory-init
+npx dsh-memory-init        # or: node bin/init.js
 ```
-
-⚠️ Don't write plain `npx dsh-memory-init` — npm resolves that to a **package named
-`dsh-memory-init`** (which doesn't exist → 404). It matches on the package name, not the bin name.
 
 It creates the six layers under `~/.dsh/`, each with one real, readable file
 (`AGENTS.md` / a sample doc / a sample skill / a daily entry / a review / a changelog line),
@@ -191,10 +185,10 @@ The directories in `layers.json` don't exist, or contain no `.md` files. Write a
 ## Status
 
 - Version `1.0.0`, used daily on DSH `0.2.2-rc.1`
-- Retrieval quality: **61/62 (98%)** on zero-target blind tests, questions all taken from real user utterances (not self-authored quiz items) — measured 2026-11-14
+- Retrieval quality: 59/59 on zero-target blind tests (questions taken from real user utterances, not self-authored quiz items)
 - Two implementations (CLI scripts / plugin routes) are guarded by `parity-check`, 12 cases compared one by one
 
-**First install:** run `npx -y -p dsh-memory-xfy dsh-memory-init`. It scaffolds a minimal working structure under `~/.dsh/` — all six layers get one real, readable file, so the panel has something to show on first open. **Existing files are never overwritten** (`--force` to overwrite, `--dir` to target another directory).
+**First install:** run `npx dsh-memory-init` (or `node bin/init.js`). It scaffolds a minimal working structure under `~/.dsh/` — all six layers get one real, readable file, so the panel has something to show on first open. **Existing files are never overwritten.**
 
 ## License
 

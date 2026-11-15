@@ -12,7 +12,6 @@ export const inject = ['tools', 'webServer', 'systemPrompt']
 function binScripts(home) {
   try {
     return readdirSync(join(home, 'bin'))
-
       .filter((f) => !f.includes('.bak') && !/\.(log|json|db)$/.test(f)
         && !f.startsWith('.') && !f.startsWith('mem-recall-blind')
         && !f.startsWith('mem-recall-test'))
@@ -43,10 +42,8 @@ function readText(file) {
     if (String(file).endsWith('.enc')) {
       return privateDecrypt(file)
     }
-
     const inScriptDir = String(file).startsWith(join(homedir(), '.dsh', 'bin') + '/')
     if (inScriptDir) {
-
       try { if (statSync(file).size > 1000000) return '' } catch { return '' }
       return scriptNotes(readFileSync(file, 'utf8'))
     }
@@ -61,7 +58,6 @@ function rawInfo(mdPath) {
     const rel = m ? m[1].trim() : ''
     if (!rel) return { ok: false, rel: '', abs: '', why: '这一轮没有原文' }
     let abs = resolve(dirname(mdPath), rel)
-
     if (!existsSync(abs)) {
       for (const suf of ['.zst.enc', '.zst', '.gz.enc', '.gz']) {
         if (existsSync(abs + suf)) { abs = abs + suf; break }
@@ -91,7 +87,6 @@ const DATE_RE = /(\d{4}-\d{2}-\d{2})/
 const FM_HEAD_RE = /^---\n([\s\S]*?)\n---\n/
 
 const pad5 = (v) => (v.length === 4 ? '0' + v : v)
-
 const padTs = (v) => (!v ? v : (v.length === 16 ? v + ':00' : v))
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const hm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
@@ -117,6 +112,11 @@ function sectionTimes(text, path, mtime) {
     if (m1) fmTs = padTs(m1[1].slice(0, 19).replace('T', ' '))
     if (m2) fmEnd = padTs(m2[1].slice(0, 19).replace('T', ' '))
   }
+  if (fm && mtime) {
+    const _d = new Date(mtime * 1000)
+    const _mt = `${ymd(_d)} ${hm(_d)}:00`
+    if (!fmEnd || fmEnd < _mt) fmEnd = _mt
+  }
   const out = []
   const lines = text.split('\n')
   for (let i = 0; i < lines.length; i++) {
@@ -124,7 +124,6 @@ function sectionTimes(text, path, mtime) {
     if (!m) continue
     const hh = HHMM_RE.exec(m[1].trim())
     if (hh) {
-
       out.push([i + 1, padTs(`${date} ${pad5(hh[1])}`),
                 hh[2] ? padTs(`${date} ${pad5(hh[2])}`) : null])
     }
@@ -141,7 +140,6 @@ function tsOf(secs, line) {
   for (const [sln, s, e] of secs) {
     if (sln <= line) { ts = s; te = e } else break
   }
-
   if (ts === null && secs.length) { ts = secs[0][1]; te = secs[0][2] }
   return [ts, te]
 }
@@ -239,7 +237,6 @@ function chunkText(text, target = 400, hard = 1600) {
     curLine += 1
   }
   flush()
-
   const merged = []
   let mbuf = [], mbufLn = null, mlen = 0
   const mflush = () => {
@@ -254,7 +251,6 @@ function chunkText(text, target = 400, hard = 1600) {
   }
   mflush()
   const fine = []
-
   for (let [ln, seg] of merged) {
     while (seg.length > hard) {
       let cut = seg.lastIndexOf('。', target)
@@ -269,30 +265,22 @@ function chunkText(text, target = 400, hard = 1600) {
 
 const STOP = new Set(['怎么', '如何', '什么', '为什么', '哪个', '哪些', '是否', '可以', '需要', '我们', '现在', '的', '了', '吗', '呢', '吧'])
 
-// 只拿 >=2 字的停用词当分隔符（单字「的/了/吗」切太碎）。
-// 按长度倒序排，保证「为什么」先于「什么」匹配。
 const STOP_SPLIT = new RegExp(
   [...STOP].filter((w) => w.length >= 2).sort((a, b) => b.length - a.length).join('|'))
 
 function termsOf(q) {
   const parts = String(q || '').split(/[\s，。、；：？！,.;:?!（）()\[\]"'“”‘’]+/).filter(Boolean)
-  // 必须是 let：下面「去掉尾巴词」之后要整体换掉（out = stripped ...）。
-  // 段 1 写成了 const，node --check 查不出来，运行时才崩「Assignment to constant variable」。
+
   let out = []
   for (const t of parts) {
-    // 🔴 2026-11-15：**没有标点的长句会整段进来**，再被下面的 4-gram 展开成跨词边界的碎片
-    // （「备份为什么失败」→ 备份为什 / 为什么失 / 么失败，一个都不在正文里）。
-    // 先用 >=2 字的停用词当分隔符切一遍。`bin/memq` 的 Python 版同步改过，两边必须一致
-    // （`bin/parity-check` 盯着）。
+
     for (const sub of t.trim().split(STOP_SPLIT)) {
       const s = sub.trim()
       if (s.length >= 2 && !STOP.has(s)) out.push(s)
     }
   }
   if (!out.length && q) out.push(String(q).trim())
-
   const TAIL = ['多少', '多久', '什么时候', '什么样', '怎么样', '是什么', '哪里', '几个', '几次', '了吗', '呢', '吧', '的', '了']
-
   const FILLER = ['注意事项', '相关内容', '相关', '内容', '情况', '方法', '办法', '介绍', '说明', '东西', '事情']
   const ALL = TAIL.concat(FILLER)
   const stripped = []
@@ -312,7 +300,6 @@ function termsOf(q) {
     if (t.length >= 6 && /[\u4e00-\u9fff]/.test(t)) {
       const wins = []
       for (let i = 0; i + 4 <= t.length; i += 2) wins.push(t.slice(i, i + 4))
-
       const tail = t.slice(-4)
       if (!wins.includes(tail)) wins.push(tail)
       expanded.push(...wins)
@@ -413,7 +400,6 @@ function collapseByDoc(hits) {
 
 let _sigCache = null, _sigMtime = 0
 function importanceOf(path, line, opts) {
-
   const file = join(homedir(), '.dsh', 'cache', 'mem-signals.json')
   try {
     const st = statSync(file)
@@ -422,20 +408,17 @@ function importanceOf(path, line, opts) {
       _sigMtime = st.mtimeMs
     }
   } catch { _sigCache = _sigCache || {} }
-
   if (line !== undefined && line !== null) {
     const seg = _sigCache[String(path) + ':' + String(line)]
     if (seg && typeof seg.importance === 'number') return seg.importance
   }
   const v = _sigCache[String(path)]
   if (!(v && typeof v.importance === 'number')) return 50
-
   if (opts && opts.display) {
     const best = _bestSegImportance(String(path))
     if (best !== null) return best
   }
   if (_hasSegKey(String(path))) {
-
     return 50
   }
   return v.importance
@@ -481,10 +464,8 @@ function _tie(a, b) {
 }
 function scoreRows(rows, query, minWcov = 0.25, wantWhy = false) {
   const ts = termsOf(query)
-
   const qb = new Set(bigrams(ts.join(' ')).map((b) => b.toLowerCase()))
   const scored = []
-
   const cand = []
   const gdf = new Map()
   for (const r of rows) {
@@ -504,7 +485,6 @@ function scoreRows(rows, query, minWcov = 0.25, wantWhy = false) {
   let wsum = 0
   for (const b of qb) wsum += wid.get(b) || 0
   if (!wsum) wsum = 1
-
   const floor = qb.size <= 1 ? 1 : 2
   for (const { r, low, hit } of cand) {
     if (hit.length < floor) continue
@@ -515,17 +495,13 @@ function scoreRows(rows, query, minWcov = 0.25, wantWhy = false) {
     const cov = hit.length
     const exact = ts.filter((t) => t.length >= 2 && low.includes(t)).length
     const ratio = cov / Math.max(1, qb.size)
-
     const rel = ratio * 40 + cov * 6 + exact * 25 - r.body.length / 1500
     const _imp = importanceOf(r.path, r.line, { forScore: true })
-
     const _wm = 1 + (r.weight - 3) * 0.06
     let score = rel * _wm * (0.75 + 0.5 * _imp / 100)
-
     const LAYER_MUL = { daily: 0.78, log: 0.78, reviews: 0.85 }
     const _layerMul = LAYER_MUL[r.layer] || 1
     score *= _layerMul
-
     let _decayVal = 1, _decayDays = 0
     if (['daily', 'log', 'reviews'].includes(r.layer)) {
       const dm = /(\d{4})-(\d{2})-(\d{2})/.exec(String(r.path))
@@ -536,10 +512,8 @@ function scoreRows(rows, query, minWcov = 0.25, wantWhy = false) {
         if (decay < 0.999) { score *= decay; _decayVal = decay; _decayDays = days }
       }
     }
-
     let _isHead = false
     if (Number(r.line) === 1 && /(?:title|description|name):/.test(r.body)) { score += exact * 20 + cov * 3; _isHead = true }
-
     const kwm = /keywords:([^\n]*)/.exec(r.body)
     let _kh = 0
     if (kwm) {
@@ -547,7 +521,6 @@ function scoreRows(rows, query, minWcov = 0.25, wantWhy = false) {
       for (const b of qb) if (kw.includes(b)) _kh++
       if (_kh >= 2) score += _kh * 15
     }
-
     let _why = null
     if (wantWhy) {
       const parts = [`覆盖 ${cov}/${qb.size} 加权${Math.round(wcov * 100)}%`, `原词 ${exact}`]
@@ -570,12 +543,10 @@ function openDb(dbPath) {
   db.exec('PRAGMA journal_mode=WAL')
   db.exec(`CREATE TABLE IF NOT EXISTS files(
     path TEXT PRIMARY KEY, layer TEXT, weight INTEGER, mtime REAL, hash TEXT, size INTEGER)`)
-
   for (const t of ['chunks', 'chunks_record']) {
     db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS ${t} USING fts5(
       body, path UNINDEXED, layer UNINDEXED, line UNINDEXED, weight UNINDEXED, tokenize='trigram')`)
   }
-
   db.exec(`CREATE TABLE IF NOT EXISTS chunk_ts(
     path TEXT, line INTEGER, ts TEXT, ts_end TEXT, PRIMARY KEY(path, line))`)
   return db
@@ -584,12 +555,10 @@ function openDb(dbPath) {
 function indexAll(db, home, { quiet = true } = {}) {
   let added = 0, chunks = 0, skipped = 0
   const seen = new Set()
-
   const fileMap = new Map(
     db.prepare('SELECT path, hash, mtime, size, layer FROM files').all().map((r) => [r.path, r]))
   const tsSet = new Set(
     db.prepare('SELECT DISTINCT path FROM chunk_ts').all().map((r) => r.path))
-
   const delChunk = {
     chunks: db.prepare('DELETE FROM chunks WHERE path = ?'),
     chunks_record: db.prepare('DELETE FROM chunks_record WHERE path = ?'),
@@ -598,7 +567,6 @@ function indexAll(db, home, { quiet = true } = {}) {
     chunks: db.prepare('INSERT INTO chunks(body, path, layer, line, weight) VALUES(?,?,?,?,?)'),
     chunks_record: db.prepare('INSERT INTO chunks_record(body, path, layer, line, weight) VALUES(?,?,?,?,?)'),
   }
-
   const selTs = db.prepare('SELECT 1 AS ok FROM chunk_ts WHERE path = ? LIMIT 1')
   const delTs = db.prepare('DELETE FROM chunk_ts WHERE path = ?')
   const insTs = db.prepare('INSERT OR REPLACE INTO chunk_ts(path, line, ts, ts_end) VALUES(?,?,?,?)')
@@ -609,22 +577,17 @@ function indexAll(db, home, { quiet = true } = {}) {
       if (!f || !existsSync(f)) continue
       const st = statSync(f)
       const prev = fileMap.get(f)
-
       const hasTs = tsSet.has(f)
-
       if (prev && hasTs && Math.round(prev.mtime * 1000) === Math.round(st.mtimeMs)
           && prev.size === st.size && prev.layer === layer) {
         skipped++; seen.add(f); continue
       }
       const text = readText(f)
-
       const h = createHash('sha256').update(text).update(CHUNK_VERSION).digest('hex').slice(0, 16)
-
       if (prev && prev.hash === h && hasTs && prev.layer === layer) {
         upsert.run(f, layer, weight, st.mtimeMs / 1000, h, st.size)
         skipped++; seen.add(f); continue
       }
-
       for (const t of ALL_TABLES) delChunk[t].run(f)
       delTs.run(f)
       const parts = chunkText(text, CHUNK_TARGET[layer] || 400)
@@ -632,19 +595,16 @@ function indexAll(db, home, { quiet = true } = {}) {
       for (const [ln, body] of parts) insChunk[_tbl].run(body, f, layer, ln, weight)
       const secs = sectionTimes(text, f, st.mtimeMs / 1000)
       if (parts.length === 0) {
-
         insTs.run(f, 0, String(st.mtimeMs / 1000), String(st.mtimeMs / 1000))
       }
       for (const [ln] of parts) {
         const [ts, te] = tsOf(secs, ln)
         insTs.run(f, ln, ts, te)
       }
-
       upsert.run(f, layer, weight, st.mtimeMs / 1000, h, st.size)
       added++; chunks += parts.length; seen.add(f)
     }
   }
-
   const all = db.prepare('SELECT path FROM files').all()
   for (const { path } of all) {
     if (!seen.has(path)) {
@@ -660,7 +620,6 @@ function indexAll(db, home, { quiet = true } = {}) {
 function splitEntries(file, text) {
   const lines = text.split('\n')
   const out = []
-
   let cur = { index: 0, body: '', start: 1 }
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
@@ -702,12 +661,10 @@ function parseFrontmatter(text) {
 }
 
 const FM_HUMAN = ["title", "description", "category", "keywords", "status", "created_at", "updated_at", "name"]
-
 const FM_MACHINE = ["id", "content_hash", "source_paths", "session_ids", "memory_body_ids",
   "snippet_from"]
 
 function headingOf(body) {
-
   const m = body.match(/^#{1,3}\s+(.+)$/m) || body.match(/^【([^】]+)】/)
   if (m) return m[1].trim().slice(0, 60)
   return body.replace(/\s+/g, ' ').trim().slice(0, 60)
@@ -719,25 +676,20 @@ function joinEntries(file, entries) {
 
 function fileLabel(file, text, layer) {
   const base = basename(file)
-
   if (layer === 'daily') {
     const h2 = /^##\s+(.+)$/m.exec(text || '')
     if (h2) {
       const t = h2[1].replace(/\s+/g, ' ').trim()
-
       if (t) return t
     }
     return base.replace(/\.md$/i, '')
   }
-
   const parent = basename(dirname(file))
   if (parent === 'changelog' || parent === 'outbound' || parent === 'reviews') {
     return base.replace(/\.md$/i, '')
   }
   if (base === 'SKILL.md') return basename(dirname(file))
-
   if (base === 'ITERATIONS.md') return basename(dirname(file))
-
   if (layer === 'docs') {
     const fmTitle = parseFrontmatter(text || '').meta?.title
     if (typeof fmTitle === 'string' && fmTitle.trim()) {
@@ -763,31 +715,23 @@ const SKILL_GROUPS = {
   '桌面': '🖥 桌面',
   '社交': '💬 社交账号',
   '技能': '🧠 技能与记忆',
-
   '技能与记忆': '🧠 技能与记忆',
-
   '借鉴': '📚 借鉴',
 }
 
 function groupOf(layer, file, text) {
-
   if (layer === 'docs' || layer === 'skills') {
     const m = /^category:\s*"?([^"\n]+)"?/m.exec(text || '')
     const cat = m ? m[1].trim() : ''
-
     if (cat) return SKILL_GROUPS[cat] || ('📁 ' + cat)
     return '未分类'
   }
-
   if (layer === 'log') {
-
     const dir = basename(dirname(file))
     if (dir === 'changelog' || dir === 'outbound') return dir
-
     if (file.includes('logs/skills/')) return 'skills'
     return ''
   }
-
   if (layer === 'daily') {
     const dir = basename(dirname(file))
     return dir === 'daily' ? basename(file).replace(/\.md$/i, '') : dir
@@ -799,7 +743,6 @@ function groupDirOf(layer, file) {
   if (layer === 'daily') {
     const dir = dirname(file)
     if (basename(dir) !== 'daily') return dir
-
     const sub = join(dir, basename(file).replace(/\.md$/i, ''))
     return existsSync(sub) ? sub : dir
   }
@@ -807,7 +750,6 @@ function groupDirOf(layer, file) {
     const dir = dirname(file)
     const d = basename(dir)
     if (d === 'changelog' || d === 'outbound') return dir
-
     if (file.includes('logs/skills/')) return dirname(dirname(file))
     return ''
   }
@@ -820,7 +762,6 @@ const LAYER_DIRS = {
 }
 
 const _treeCache = new Map()
-
 const _TREE_CACHE_VER = 10
 
 function _fileSig(st) {
@@ -835,7 +776,6 @@ function buildTree(home) {
     for (const f of files) {
       if (!f || !existsSync(f)) continue
       seen.add(f)
-
       let st = null
       try { st = statSync(f) } catch { continue }
       const sig = _fileSig(st)
@@ -848,24 +788,19 @@ function buildTree(home) {
       }
       let text = ''
       text = readText(f)
-
       const fm0 = parseFrontmatter(text)
       let entries = splitEntries(f, text).map((e) => {
         const inner = parseFrontmatter(e.body).body
         const hd = headingOf(inner) || (fm0.meta && fm0.meta.title) || '(文件头)'
-
         return { index: e.index, heading: hd, chars: e.body.length,
                  hasBody: inner.trim().length > 0 }
       })
       const label = fileLabel(f, text, layer)
-
       const _normLabel = (s) => (s || '').replace(/\s+/g, ' ').trim().slice(0, 60)
       entries = entries.filter((e) => _normLabel(e.heading) !== _normLabel(label))
-
       entries = entries.filter((e) => e.hasBody).map(({ hasBody, ...rest }) => rest)
       const group = groupOf(layer, f, text)
       const groupDir = groupDirOf(layer, f)
-
       const z = tblOf(layer, f) === 'chunks_record' ? 'cold' : 'hot'
       _treeCache.set(f, { sig, ver: _TREE_CACHE_VER, chars: text.length, label, entries, group, groupDir, zone: z })
       items.push({
@@ -873,19 +808,16 @@ function buildTree(home) {
         chars: text.length, entries, group, groupDir, zone: z,
       })
     }
-
     if (items.length) out.push({
       layer, weight, flat: false, files: items,
       dir: LAYER_DIRS[layer] ? join(home, LAYER_DIRS[layer]) : '',
     })
   }
-
   for (const k of _treeCache.keys()) if (!seen.has(k)) _treeCache.delete(k)
   return out
 }
 
 function normTime(v, upper = false) {
-
   const t = String(v || '').trim()
   if (!t) return ''
   const z = (hms) => (hms.length <= 5 ? hms.padStart(5, '0') : hms.padStart(8, '0'))
@@ -900,7 +832,6 @@ function hotWindowDefaults() { return { daily: 3, log: 3, reviews: 7 } }
 let _HW_CACHE = null, _HW_MTIME = -1
 function hotWindow() {
   const def = hotWindowDefaults()
-
   try {
     const f = join(homedir(), '.dsh', 'layers.json')
     const mt = statSync(f).mtimeMs
@@ -910,7 +841,6 @@ function hotWindow() {
     for (const L of (cfg.layers || [])) {
       if (L && L.name && L.window != null) o[L.name] = Math.max(0, Number(L.window) || 0)
     }
-
     for (const k of Object.keys(def)) if (!(k in o)) o[k] = def[k]
     _HW_CACHE = o; _HW_MTIME = mt
     return o
@@ -922,7 +852,6 @@ function dayOfPath(p) {
   const d = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`)
   return Number.isNaN(d.getTime()) ? null : d
 }
-
 function isArchived(p) { return String(p).includes('/archived/') }
 function tblOf(layer, p) {
   if (isArchived(p)) return 'chunks_record'
@@ -938,32 +867,25 @@ function tblOf(layer, p) {
 const RECORD_LAYERS = new Set(['daily', 'log'])
 const ALL_TABLES = ['chunks', 'chunks_record']
 function tablesFor(lf, zone) {
-
   if (zone === 'none') return []
   if (zone === 'cold') return ['chunks_record']
   if (zone === 'both' || zone === 'all' || zone === true) return ALL_TABLES
   if (zone === 'hot') return ['chunks']
   if (!lf || !lf.size) return ['chunks']
-
   for (const x of lf) if (x in hotWindowDefaults()) return ALL_TABLES
   return ['chunks']
 }
 
 function search(db, query, limit, layer, opts) {
-
   const o = opts || {}
-
   const zone = o.zone || (o.all ? 'both' : undefined)
   const lf = layer ? new Set(String(layer).split(',').map((x) => x.trim()).filter(Boolean)) : null
   const sp = (v) => String(v || '').split(/[\s,]+/).filter(Boolean)
   const must = sp(o.must).map((w) => w.toLowerCase())
   const not = sp(o.not).map((w) => w.toLowerCase())
   const pathSub = String(o.path || '').toLowerCase()
-
   const cats = sp(o.category || o.cat).map((w) => w.toLowerCase())
-
   const since = String(o.since || '').trim()
-
   const cAfter = normTime(o.createdAfter || o['created-after'])
   const cBefore = normTime(o.createdBefore || o['created-before'], true)
   const mAfter = normTime(o.modifiedAfter || o['modified-after'])
@@ -971,18 +893,15 @@ function search(db, query, limit, layer, opts) {
   const after = normTime(o.after)
   const before = normTime(o.before, true)
   const wantTime = !!(cAfter || cBefore || mAfter || mBefore || after || before)
-
   const tagList = sp(o.tags || o.tag)
   const secTags = tagList.length ? tagMapOf(db) : null
   const fileKws = tagList.length ? kwMapOf(db) : null
   const passTag = (p, line) => {
     if (!tagList.length) return true
-
     const have = secTags.byPath.get(String(p)) || EMPTY_SET
     const fk = fileKws.get(String(p)) || EMPTY_SET
     return tagList.every((t) => have.has(t) || fk.has(t))
   }
-
   const _num = (v) => {
     if (v === null || v === undefined || String(v).trim() === '') return null
     const n = Number(v)
@@ -1023,7 +942,6 @@ function search(db, query, limit, layer, opts) {
     rows = rows.concat(db.prepare(`SELECT body, path, layer, line, weight, '${t}' AS tbl FROM ${t}`).all())
   }
   if (lf) rows = rows.filter((r) => lf.has(r.layer))
-
   const catCache = new Map()
   const catOf = (p) => {
     if (catCache.has(p)) return catCache.get(p)
@@ -1041,7 +959,6 @@ function search(db, query, limit, layer, opts) {
     return m ? m[1] : ''
   }
   const passDate = (p) => !since || !dateOf(p) || dateOf(p) >= since
-
   if (must.length || not.length || pathSub || cats.length || since || wantTime || secTags || wantImp) {
     rows = rows.filter((r) => {
       const low = r.body.toLowerCase()
@@ -1060,7 +977,6 @@ function search(db, query, limit, layer, opts) {
     })
   }
   if (!rows.length) return []
-
   if (!String(query || '').trim()) {
     return rows
       .map((r) => ({ ...r, score: 50 + (r.weight || 0) * 6 - r.body.length / 2000 }))
@@ -1068,13 +984,11 @@ function search(db, query, limit, layer, opts) {
       .slice(0, limit)
   }
   const scored = scoreRows(rows, query, 0.25, !!(opts && opts.why))
-
   const ts = termsOf(query)
   const ascii = ts.filter((t) => /^[A-Za-z0-9_./-]+$/.test(t))
   if (ascii.length) {
     const fts = ascii.map((t) => '"' + t.replace(/"/g, '""') + '"').join(' OR ')
     let ftsRows = []
-
     for (const t of tablesFor(lf, zone)) {
       try {
         ftsRows = ftsRows.concat(db.prepare(
@@ -1083,7 +997,6 @@ function search(db, query, limit, layer, opts) {
       } catch {  }
     }
     const seen = new Set(scored.map((r) => r.path + ':' + r.line))
-
     for (const r of ftsRows) {
       if (seen.has(r.path + ':' + r.line)) continue
       if (lf && !lf.has(r.layer)) continue
@@ -1092,7 +1005,6 @@ function search(db, query, limit, layer, opts) {
       if (not.some((w) => low2.includes(w))) continue
       if (pathSub && !String(r.path).toLowerCase().includes(pathSub)) continue
       if (!passDate(r.path)) continue
-
       if (cats.length) {
         const fc2 = catOf(r.path)
         if (!cats.some((c) => fc2.includes(c))) continue
@@ -1104,7 +1016,6 @@ function search(db, query, limit, layer, opts) {
     }
     scored.sort(_tie)
   }
-
   const syn = expandSynonyms(ts, query)
   const seenMain = new Set(scored.map((r) => r.path + ':' + r.line))
   if (syn.length) {
@@ -1133,17 +1044,13 @@ function search(db, query, limit, layer, opts) {
       if (cov3 < need2) continue
       let exact3 = 0
       for (const t of syn) if (t.length >= 2 && low3.includes(t.toLowerCase())) exact3++
-
       const s3 = 10 + cov3 * 3 + exact3 * 6 + r.weight * 3 - r.body.length / 2000
       synHits.push({ ...r, score: s3, synHit: syn.slice(0, 3).join('/') })
     }
-
     synHits.sort((a, b) => b.score - a.score)
     scored.push(...synHits.slice(0, 3))
   }
-
   const perFile = 2
-
   const capLayer = Math.max(2, Math.floor(Math.max(limit * 2, 20) * 0.6))
   const out = [], cntFile = {}, cntLayer = {}
   for (const r of scored) {
@@ -1172,7 +1079,6 @@ function logAccess(paths, src = 'panel') {
 }
 
 function pack(db, query, limit = 10, budget = 6000) {
-
   const all = []
   for (const t of ALL_TABLES) {
     all.push(...db.prepare(`SELECT body, path, layer, line, weight FROM ${t}`).all())
@@ -1199,7 +1105,6 @@ function pack(db, query, limit = 10, budget = 6000) {
   }
   harvest(scoreRows(all, query), Math.max(1, limit - 2))
   if (picked.length < limit) harvest(scoreRows(all, query, 0.12), limit - picked.length)
-
   picked.sort(_tie)
   return { picked, used }
 }
@@ -1260,7 +1165,6 @@ function saveSkill(home, skillName, body, { description, indexPath } = {}) {
 
 export function apply(ctx, config = {}) {
   const home = config.home || process.env.DSH_HOME || join(homedir(), '.dsh')
-
   const dbPath = config.dbPath || join(home, 'cache', 'mem.db')
   const autoIndex = config.autoIndexOnSearch !== false
   const db = openDb(dbPath)
@@ -1305,7 +1209,6 @@ export function apply(ctx, config = {}) {
       ensureFresh()
       const all = search(db, query, 10 ** 6, layer, { must, not, path, category, since, after, before, createdAfter, createdBefore, modifiedAfter, modifiedBefore, tags })
       const lim = limit || 20
-
       const grouped = collapseByDoc(all)
       const hits = grouped.slice(0, lim).map(({ h, n: segN }) => ({
         layer: h.layer, path: short(h.path), line: h.line,
@@ -1333,7 +1236,6 @@ export function apply(ctx, config = {}) {
     },
     execute: async ({ query, budget }) => {
       ensureFresh()
-
       const { picked, used } = pack(db, query, 10, budget || 6000)
       const brief = picked.length
         ? `## 记忆简报：${query}\n\n` + picked.map((p) => `- [${p.layer}] ${short(p.path)}:${p.line}\n  ${p.snippet}`).join('\n')
@@ -1366,7 +1268,6 @@ export function apply(ctx, config = {}) {
     const applySave = (body) => {
       const path = String(body.path || '')
       if (!path || !existsSync(path)) return { ok: false, error: '文件不存在' }
-
       if (body.whole) {
         const raw = readText(path)
         const m = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(raw)
@@ -1420,7 +1321,6 @@ export function apply(ctx, config = {}) {
     }
 
     const PICKS_FILE = () => join(homedir(), '.dsh', 'docs', 'daily-picks.md')
-
     const SNIP_MARK = /<!--\s*snip\s+after="([^"]*)"\s+at="([^"]*)"\s*-->/g
     const _pad2 = (n) => String(n).padStart(2, '0')
     const _nowLocal = () => {
@@ -1428,7 +1328,6 @@ export function apply(ctx, config = {}) {
       return `${d.getFullYear()}-${_pad2(d.getMonth() + 1)}-${_pad2(d.getDate())} `
         + `${_pad2(d.getHours())}:${_pad2(d.getMinutes())}:${_pad2(d.getSeconds())}`
     }
-
     const parseSnips = (txt) => {
       const out = []
       const marks = []
@@ -1483,7 +1382,6 @@ export function apply(ctx, config = {}) {
       const now = _nowLocal()
 
       if (action === 'archive') {
-
         if (!existsSync(hotPath)) return { ok: false, error: '热区文件不存在：' + hotRel }
         const text = readText(hotPath)
         const fm = parseFrontmatter(text)
@@ -1500,22 +1398,18 @@ export function apply(ctx, config = {}) {
         const to = idx + 1 < ents.length ? ents[idx + 1].start - 1 : blines.length
         const removed = blines.slice(from, to).join('\n').trim()
         const kept = [...blines.slice(0, from), ...blines.slice(to)].join('\n').replace(/\n{3,}/g, '\n\n')
-
         let cold = existsSync(coldPath) ? readText(coldPath) : ''
         const block = `\n<!-- snip after="${prevTitle}" at="${now}" -->\n${removed}\n`
         if (cold) cold = touchSnipFm(cold)
         else cold = snipFrontmatter(text, hotRel)
-
         mkdirSync(dirname(coldPath), { recursive: true })
         writeText(coldPath, cold.replace(/\s*$/, '\n') + block)
-
         writeText(hotPath, head + kept)
         reindex()
         return { ok: true, message: `已存档「${headingOf(parseFrontmatter(removed).body) || '这一节'}」→ archived/${hotRel}` }
       }
 
       if (action === 'restore') {
-
         if (!existsSync(coldPath)) return { ok: false, error: '冷区没有对应文件：archived/' + hotRel }
         const cold = readText(coldPath)
         const snips = parseSnips(cold)
@@ -1524,16 +1418,13 @@ export function apply(ctx, config = {}) {
           return { ok: false, error: `冷区这份文件没有第 ${idx} 个片段（共 ${snips.length} 个）` }
         }
         const sn = snips[idx]
-
         const marks = []
         SNIP_MARK.lastIndex = 0
         let m
         while ((m = SNIP_MARK.exec(cold))) marks.push({ from: m.index, to: SNIP_MARK.lastIndex })
         const endAll = idx + 1 < marks.length ? marks[idx + 1].from : cold.length
         const coldKept = cold.slice(0, marks[idx].from) + cold.slice(endAll)
-
         if (!parseFrontmatter(coldKept).body.trim()) {
-
           try {
             unlinkSync(coldPath)
             const stop = join(homedir(), '.dsh', 'archived')
@@ -1546,7 +1437,6 @@ export function apply(ctx, config = {}) {
         } else {
           writeText(coldPath, touchSnipFm(coldKept).replace(/\n{3,}/g, '\n\n'))
         }
-
         const hotExists = existsSync(hotPath)
         const hot = hotExists ? readText(hotPath) : ''
         const hfm = parseFrontmatter(hot)
@@ -1568,12 +1458,10 @@ export function apply(ctx, config = {}) {
             const cut = at + 1 < hents.length ? hents[at + 1].start - 1 : blines.length
             hbody = [...blines.slice(0, cut), ...sn.body.split('\n'), '', ...blines.slice(cut)].join('\n')
           } else {
-
             anchorLost = true
             hbody = hbody.replace(/\s*$/, '\n\n') + sn.body + '\n'
           }
         } else {
-
           hbody = sn.body + '\n\n' + hbody.replace(/^\s*\n/, '')
         }
         mkdirSync(dirname(hotPath), { recursive: true })
@@ -1607,7 +1495,6 @@ export function apply(ctx, config = {}) {
       }
       if (zone === 'hot' && isCold) {
         const dst = join(H, rel.replace(/^archived[\\/]/, ''))
-
         if (existsSync(dst)) {
           return { ok: false,
             error: `热区已有同名文件，不敢覆盖：${relative(H, dst)}`
@@ -1635,10 +1522,8 @@ export function apply(ctx, config = {}) {
       const f = PICKS_FILE()
       const now = new Date().toISOString()
       const short = src.replace(/^.*\/\.dsh\//, '~/.dsh/')
-
       const _d = new Date(), _p = (n) => String(n).padStart(2, '0')
       const nowLocal = `${_d.getFullYear()}-${_p(_d.getMonth() + 1)}-${_p(_d.getDate())} ${_p(_d.getHours())}:${_p(_d.getMinutes())}:${_p(_d.getSeconds())}`
-
       const bodyText = content.replace(/^\s*#{1,6}\s+[^\n]*\n+/, '').trim() || content
       const block = `\n## ${title || '未命名片段'}（来自 ${short}）\n\n> 提到热区于 ${nowLocal}\n\n${bodyText}\n`
       try {
@@ -1650,7 +1535,6 @@ export function apply(ctx, config = {}) {
         let t = readFileSync(f, 'utf8')
         t = t.replace(/^updated_at: ".*"$/m, `updated_at: "${now}"`)
         writeFileSync(f, t, 'utf8')
-
         try { indexAll(db, home) } catch {  }
         return { ok: true, message: '已提到热区 → docs/' + basename(f) + '（docs 层，永远热区）' }
       } catch (e) { return { ok: false, error: String(e) } }
@@ -1674,7 +1558,6 @@ export function apply(ctx, config = {}) {
             const total = ALL_TABLES.reduce((a, t) => a + db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n, 0)
             const nFiles = db.prepare('SELECT COUNT(*) AS n FROM files').get().n
             const _t2 = Date.now()
-
             return json({ ok: true, files: nFiles, chunks: total, layers: files, db: short(dbPath), idx,
                           timing: { fresh: _t1 - _t0, queries: _t2 - _t1 } })
           } catch (e) { return json({ ok: false, error: String(e) }) }
@@ -1683,7 +1566,6 @@ export function apply(ctx, config = {}) {
           try { return json({ ok: true, layers: buildTree(home) }) }
           catch (e) { return json({ ok: false, error: String(e) }) }
         }
-
         if (url.pathname === '/memory-xfy/reveal'
           || url.pathname === '/memory-xfy/open'
           || url.pathname === '/memory-xfy/copy') {
@@ -1706,19 +1588,16 @@ export function apply(ctx, config = {}) {
             return json({ ok: true, path: real })
           } catch (e) { return json({ ok: false, error: String(e) }) }
         }
-
         if (url.pathname === '/memory-xfy/raw') {
           const raw = url.searchParams.get('path') || ''
           if (!raw) return json({ ok: false, error: '缺少 path' })
           const real = resolve(raw)
           if (!existsSync(real)) return json({ ok: false, error: '不存在：' + real })
           try {
-
             const info = rawInfo(real)
             if (!info.ok) return json({ ok: false, error: info.why })
             const day = basename(dirname(real))
             const name = basename(real).replace(/\.md$/, '')
-
             let html = ''
             try {
               html = execFileSync(join(home, 'bin', 'daily-raw'), [day, name, '--html'],
@@ -1737,18 +1616,14 @@ export function apply(ctx, config = {}) {
           if (!path || !existsSync(path)) return json({ ok: false, error: '文件不存在' })
           try {
             const raw = readText(path)
-
             const fm = parseFrontmatter(raw)
             if (index < 0) {
               return json({
                 ok: true, path, index: -1, whole: true, heading: basename(path),
-
                 content: raw, body: fm.meta ? fm.body : '', meta: fm.meta, fmRaw: fm.raw,
                 human: fm.meta ? FM_HUMAN.filter((k) => fm.meta[k] !== undefined) : [],
                 machine: fm.meta ? FM_MACHINE.filter((k) => fm.meta[k] !== undefined) : [],
-
                 importance: importanceOf(path, null, { display: true }),
-
                 raw: rawInfo(path).ok,
               })
             }
@@ -1757,13 +1632,11 @@ export function apply(ctx, config = {}) {
             if (!e) return json({ ok: false, error: '条目不存在' })
             return json({
               ok: true, path, index, heading: headingOf(e.body), content: e.body, meta: fm.meta,
-
               importance: importanceOf(path, e.start, { display: true }),
             })
           } catch (err) { return json({ ok: false, error: String(err) }) }
         }
         if (url.pathname === '/memory-xfy/tags') {
-
           try {
             const counts = new Map()
             for (const tags of tagMapOf(db).byPath.values()) {
@@ -1784,10 +1657,8 @@ export function apply(ctx, config = {}) {
         }
         if (url.pathname === '/memory-xfy/search') {
           const q = url.searchParams.get('q') || ''
-
           try {
             ensureFresh()
-
             const cache = new Map()
             const entriesOf = (p) => {
               if (!cache.has(p)) {
@@ -1803,7 +1674,6 @@ export function apply(ctx, config = {}) {
               const i = entriesOf(p).findIndex((e) => flat(e.body).includes(probe))
               return i >= 0 ? i : 0
             }
-
             const headCache = new Map()
             const headOf = (p) => {
               if (headCache.has(p)) return headCache.get(p)
@@ -1814,7 +1684,6 @@ export function apply(ctx, config = {}) {
                 if (dm) o.desc = dm[1].trim()
                 const km = /^keywords:\s*"?([^"\n]+)"?/m.exec(head)
                 if (km) o.kws = km[1].split(/[\s,，、]+/).filter(Boolean).slice(0, 6)
-
                 let body = head
                 const fm = /^---\r?\n[\s\S]*?\r?\n---\r?\n/.exec(body)
                 if (fm) body = body.slice(fm[0].length)
@@ -1824,7 +1693,6 @@ export function apply(ctx, config = {}) {
               headCache.set(p, o)
               return o
             }
-
             const segTitleOf = (p, idx) => {
               const e = entriesOf(p)[idx]
               if (!e) return ''
@@ -1832,7 +1700,6 @@ export function apply(ctx, config = {}) {
               return m ? m[1].trim().slice(0, 60) : ''
             }
             const g = (k) => url.searchParams.get(k) || ''
-
             const dbg = url.searchParams.get('debug') === '1'
             const all = search(db, q, 10 ** 6, g('layer'), { must: g('must'), not: g('not'), path: g('path'), category: g('category'), since: g('since'), after: g('after'), before: g('before'), createdAfter: g('createdAfter') || g('created-after'), createdBefore: g('createdBefore') || g('created-before'), modifiedAfter: g('modifiedAfter') || g('modified-after'), modifiedBefore: g('modifiedBefore') || g('modified-before'), tags: g('tags') || g('tag'), minimp: g('minimp') || g('min-importance'), maximp: g('maximp'), all: g('all'), zone: g('zone'), why: g('why') })
             if (dbg) {
@@ -1842,7 +1709,6 @@ export function apply(ctx, config = {}) {
               return json({ ok: true, debug: { layer: g('layer'), distinctLayers: vals, rowsWithThatLayer: hit, allTotal: all.length } })
             }
             const n = Number(g('n') || 30)
-
             const grouped = collapseByDoc(all)
             const hits = grouped.slice(0, n).map(({ h, n: segN }) => {
               const idx = entryIndexOf(h.path, h.body)
@@ -1850,26 +1716,18 @@ export function apply(ctx, config = {}) {
               const docLevel = DOC_LEVEL_LAYERS.has(h.layer)
               return {
                 layer: h.layer, path: short(h.path), full: h.path, line: h.line,
-
                 zone: h.tbl === 'chunks_record' ? 'cold' : 'hot',
-
                 index: docLevel ? -1 : idx,
                 docLevel, segCount: segN,
-
                 segTitle: docLevel ? '' : segTitleOf(h.path, idx),
                 desc: hd.desc,
                 kws: hd.kws,
-
                 score: Math.round(h.score), imp: importanceOf(h.path, h.line),
-
                 why: h.why || null,
-
                 snippet: (docLevel && hd.intro) ? hd.intro : h.body.replace(/\s+/g, ' ').trim().slice(0, 260),
               }
             })
-
             logAccess(hits.map((h) => h.full + ':' + Math.trunc(Number(h.line) || 0)))
-
             let coldHits = 0
             try {
               const _zone = g('zone')
@@ -1965,7 +1823,6 @@ export function apply(ctx, config = {}) {
             const chunks = []
             for await (const c of req) chunks.push(c)
             const r = applyZone(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'))
-
             if (r.ok) { try { _treeCache.clear() } catch {  } }
             return send(r)
           } catch (e) { return send({ ok: false, error: String(e) }) }
