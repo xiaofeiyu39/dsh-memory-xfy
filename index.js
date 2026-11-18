@@ -364,6 +364,18 @@ function tagMapOf(db) {
 }
 
 let _kwCache = null, _kwAt = 0
+
+function chipsOfHead(head) {
+  const out = new Set()
+  const m = /^keywords:\s*"?([^"\n]+)"?/m.exec(head)
+  if (!m) return []
+  for (const t of m[1].replace(/^\[|\]$/g, '').split(/[\s,，、]+/)) {
+    const v = t.trim().replace(/^["']|["']$/g, '')
+    if (v) out.add(v)
+  }
+  return [...out]
+}
+
 function kwMapOf(db) {
   const now = Date.now()
   if (_kwCache && now - _kwAt < 5000) return _kwCache
@@ -372,9 +384,8 @@ function kwMapOf(db) {
   try { rows = db.prepare('SELECT path FROM files').all() } catch { return _kwCache || m }
   for (const r of rows) {
     try {
-      const head = readText(r.path).slice(0, 1500)
-      const mm = /^keywords:\s*"?([^"\n]+)"?/m.exec(head)
-      if (mm) m.set(r.path, new Set(mm[1].split(/[\s,]+/).filter(Boolean)))
+      const chips = chipsOfHead(readText(r.path).slice(0, 1500))
+      if (chips.length) m.set(r.path, new Set(chips))
     } catch {  }
   }
   _kwCache = m; _kwAt = now
@@ -660,9 +671,15 @@ function parseFrontmatter(text) {
   return { meta, raw, body }
 }
 
-const FM_HUMAN = ["title", "description", "category", "keywords", "status", "created_at", "updated_at", "name"]
+const FM_HUMAN = ["title", "description", "category", "keywords", "tags", "status", "created_at", "updated_at", "name"]
 const FM_MACHINE = ["id", "content_hash", "source_paths", "session_ids", "memory_body_ids",
   "snippet_from"]
+
+function hasValue(v) {
+  if (v === undefined || v === null) return false
+  if (Array.isArray(v)) return v.length > 0
+  return String(v).trim() !== ''
+}
 
 function headingOf(body) {
   const m = body.match(/^#{1,3}\s+(.+)$/m) || body.match(/^【([^】]+)】/)
@@ -1621,8 +1638,8 @@ export function apply(ctx, config = {}) {
               return json({
                 ok: true, path, index: -1, whole: true, heading: basename(path),
                 content: raw, body: fm.meta ? fm.body : '', meta: fm.meta, fmRaw: fm.raw,
-                human: fm.meta ? FM_HUMAN.filter((k) => fm.meta[k] !== undefined) : [],
-                machine: fm.meta ? FM_MACHINE.filter((k) => fm.meta[k] !== undefined) : [],
+                human: fm.meta ? FM_HUMAN.filter((k) => hasValue(fm.meta[k])) : [],
+                machine: fm.meta ? FM_MACHINE.filter((k) => hasValue(fm.meta[k])) : [],
                 importance: importanceOf(path, null, { display: true }),
                 raw: rawInfo(path).ok,
               })
@@ -1682,8 +1699,7 @@ export function apply(ctx, config = {}) {
                 const head = readText(p).slice(0, 4000)
                 const dm = /^description:\s*"?([^"\n]+)"?/m.exec(head)
                 if (dm) o.desc = dm[1].trim()
-                const km = /^keywords:\s*"?([^"\n]+)"?/m.exec(head)
-                if (km) o.kws = km[1].split(/[\s,，、]+/).filter(Boolean).slice(0, 6)
+                o.kws = chipsOfHead(head).slice(0, 6)
                 let body = head
                 const fm = /^---\r?\n[\s\S]*?\r?\n---\r?\n/.exec(body)
                 if (fm) body = body.slice(fm[0].length)

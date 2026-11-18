@@ -466,7 +466,7 @@ def _tag_map(tags=None):
             if not m:
                 continue
             have = set()
-            for field in ("tags", "keywords"):
+            for field in ("keywords",):
                 mm = re.search(r"^" + field + r"\s*:\s*(.*)$", m.group(1), re.M)
                 if mm:
                     for t in re.split(r"[\s,]+", mm.group(1).strip().strip('"')):
@@ -497,7 +497,7 @@ def _sync_tags_from_fm(c):
             if not m:
                 continue
             fm = m.group(1)
-            for field in ("tags", "keywords"):
+            for field in ("keywords",):
                 mm = re.search(r"^" + field + r"\s*:\s*(.*)$", fm, re.M)
                 if not mm:
                     continue
@@ -541,7 +541,7 @@ def _tag_map():
             m = re.match(r"^---\n(.*?)\n---\n", txt, re.S)
             if not m:
                 continue
-            for field in ("tags", "keywords"):
+            for field in ("keywords",):
                 mm = re.search(r"^" + field + r"\s*:\s*(.*)$", m.group(1), re.M)
                 if not mm:
                     continue
