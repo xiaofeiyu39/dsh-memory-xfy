@@ -222,7 +222,7 @@ function skillFiles(home) {
   } catch { return [] }
 }
 
-const CHUNK_TARGET = { private: 800 }
+const CHUNK_TARGET = {}
 
 const CHUNK_VERSION = 'v3-fmhead'
 
