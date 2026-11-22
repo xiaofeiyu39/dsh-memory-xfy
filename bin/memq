@@ -78,7 +78,7 @@ def _load_layers():
 LAYERS = _load_layers()
 
 CHUNK_TARGET = {}
-CHUNK_VERSION = "v2-priv800"
+CHUNK_VERSION = "v3-fmhead"
 
 def snippet_len():
     return int(os.environ.get("MEMQ_SNIPPET") or 800)
@@ -126,7 +126,7 @@ def connect():
     return c
 
 FM_RE = re.compile(r"^---\n(.*?)\n---\n", re.S)
-FM_KEEP = ("title", "description", "keywords", "category", "name")
+FM_KEEP = ("title", "description", "tags", "category", "name")
 
 def _fm_head(text):
     m = FM_RE.match(text)
@@ -268,7 +268,7 @@ def index(verbose=True):
             _in_cold = str(f) in _paths_cold
             _ok_tbl = (((_in_hot and not _in_cold and _want == "chunks")
                         or (_in_cold and not _in_hot and _want == "chunks_record"))
-                       and row[4] == layer)
+                       and row is not None and row[4] == layer)
             if row and row[0] == h and has_ts and _ok_tbl:
                 n_skip += 1
                 if row[3] != CHUNK_VERSION:
@@ -466,7 +466,7 @@ def _tag_map(tags=None):
             if not m:
                 continue
             have = set()
-            for field in ("keywords",):
+            for field in ("tags",):
                 mm = re.search(r"^" + field + r"\s*:\s*(.*)$", m.group(1), re.M)
                 if mm:
                     for t in re.split(r"[\s,]+", mm.group(1).strip().strip('"')):
@@ -497,7 +497,7 @@ def _sync_tags_from_fm(c):
             if not m:
                 continue
             fm = m.group(1)
-            for field in ("keywords",):
+            for field in ("tags",):
                 mm = re.search(r"^" + field + r"\s*:\s*(.*)$", fm, re.M)
                 if not mm:
                     continue
@@ -541,7 +541,7 @@ def _tag_map():
             m = re.match(r"^---\n(.*?)\n---\n", txt, re.S)
             if not m:
                 continue
-            for field in ("keywords",):
+            for field in ("tags",):
                 mm = re.search(r"^" + field + r"\s*:\s*(.*)$", m.group(1), re.M)
                 if not mm:
                     continue
@@ -671,8 +671,8 @@ def _tables(f):
     if f.get("all"):
         return ("chunks", "chunks_record")
     if not lay:
-        return ("chunks",)
-    if set(lay) & set(_HOT_WINDOW):
+        return ("chunks", "chunks_record")
+    if set(lay) & set(_HOT_WINDOW) or "skills" in set(lay):
         return ("chunks", "chunks_record")
     return ("chunks",)
 
@@ -847,7 +847,7 @@ def query_rows(c, q, limit):
         if int(line or 0) == 1 and ("title:" in body or "description:" in body or "name:" in body):
             score += exact * 20 + len(hit) * 3
             why.append("头部段")
-        _m = re.search(r"keywords:([^\n]*)", body)
+        _m = re.search(r"tags:([^\n]*)", body)
         if _m:
             _kw = _m.group(1).lower()
             _kh = [b for b in qb if b in _kw]
@@ -1090,7 +1090,7 @@ def search(q, n=8):
         if is_doc and (re.match(r"^\s*(?:---|title:|description:|name:)", _raw) or len(_raw) < 60):
             _base = intro_of(str(path)) or _raw
             snippet = (_base[:220] + "…") if len(_base) > 220 else _base
-            _kw = re.search(r"keywords:\s*(.+?)(?=\s+(?:description|category|name|title):|$)", _raw)
+            _kw = re.search(r"tags:\s*(.+?)(?=\s+(?:description|category|name|title):|$)", _raw)
             if _kw:
                 snippet = snippet + "  ↳ 关键词: " + _kw.group(1)[:100]
         else:
@@ -1174,9 +1174,9 @@ def pack(q, n=10, budget=None):
         if str(layer or "") in DOC_LEVEL_LAYERS:
             _raw = snippet
             _intro = intro_of(str(path)) or ""
-            if re.match(r"^\s*(?:---|name:|title:|keywords:|description:)", _raw) or len(_raw) < 60:
+            if re.match(r"^\s*(?:---|name:|title:|tags:|description:)", _raw) or len(_raw) < 60:
                 _body = _intro or _raw
-                _kw = re.search(r"keywords:\s*(.+?)(?=\s+(?:description|category|name|title):|$)", _raw)
+                _kw = re.search(r"tags:\s*(.+?)(?=\s+(?:description|category|name|title):|$)", _raw)
                 if _kw:
                     _body = _body + "  ↳ 关键词: " + _kw.group(1)[:100]
             elif _intro and _intro[:80] not in _raw:

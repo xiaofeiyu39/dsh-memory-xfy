@@ -184,7 +184,7 @@ The directories in `layers.json` don't exist, or contain no `.md` files. Write a
 
 ## Status
 
-- Version `1.0.0`, used daily on DSH `0.2.2-rc.1`
+- Version `1.1.0`, used daily on DSH `0.2.2-rc.1`
 - Retrieval quality: 59/59 on zero-target blind tests (questions taken from real user utterances, not self-authored quiz items)
 - Two implementations (CLI scripts / plugin routes) are guarded by `parity-check`, 12 cases compared one by one
 

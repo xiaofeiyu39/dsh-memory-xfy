@@ -290,14 +290,14 @@ window.__ModuleLoader__.load({
       const [showMachine, setShowMachine] = React.useState(false)
       const [descOpen, setDescOpen] = React.useState(true)
       const [kwAll, setKwAll] = React.useState(false)
-      const [form, setForm] = React.useState({ title: '', description: '', category: '', keywords: '' })
+      const [form, setForm] = React.useState({ title: '', description: '', category: '', tags: '' })
       React.useEffect(() => {
-        if (!meta) { setForm({ title: '', description: '', category: '', keywords: '' }); setEdit(false); return }
+        if (!meta) { setForm({ title: '', description: '', category: '', tags: '' }); setEdit(false); return }
         setForm({
           title: String(meta.title || meta.name || ''),
           description: String(meta.description || ''),
           category: String(meta.category || ''),
-          keywords: Array.isArray(meta.keywords) ? meta.keywords.join(' ') : String(meta.keywords || ''),
+          tags: Array.isArray(meta.tags) ? meta.tags.join(' ') : String(meta.tags || ''),
         })
         setEdit(false)
       }, [meta])
@@ -327,7 +327,7 @@ window.__ModuleLoader__.load({
         return h('div', { style: box },
           row('title', T('标题')),
           row('category', T('分类')),
-          row('keywords', T('关键词')),
+          row('tags', T('关键词')),
           row('description', T('简介'), true),
           h('div', { style: { display: 'flex', gap: 6, justifyContent: 'flex-end' } },
             h('span', { style: { flex: 1, opacity: 0.45, fontSize: 10.5, alignSelf: 'center' } }, T('关键词用空格分隔')),
@@ -337,12 +337,12 @@ window.__ModuleLoader__.load({
               disabled: busy,
               onClick: () => onSave({
                 title: form.title, category: form.category,
-                keywords: form.keywords.split(/\s+/).filter(Boolean),
+                tags: form.tags.split(/\s+/).filter(Boolean),
                 description: form.description,
               }),
             }, T('保存属性'))))
       }
-      const kws = Array.isArray(meta.keywords) ? meta.keywords : String(meta.keywords || '').split(/\s+/).filter(Boolean)
+      const kws = Array.isArray(meta.tags) ? meta.tags : String(meta.tags || '').split(/\s+/).filter(Boolean)
       return h('div', { style: box },
         h('div', { style: { display: 'flex', gap: 5, alignItems: 'center', minWidth: 0 } },
           h('div', {
@@ -359,7 +359,7 @@ window.__ModuleLoader__.load({
             ? h('button', {
                 key: 'kwbtn', style: { ...btn, padding: '1px 7px', flex: '0 0 auto', opacity: 0.7 },
                 onClick: () => setKwAll(!kwAll),
-                title: kwAll ? T('收起 tag') : T('展开全部 ') + (kws.length + (meta.category ? 1 : 0)) + T(' 个胶囊'),
+                title: kwAll ? T('收起关键词') : T('展开全部 ') + (kws.length + (meta.category ? 1 : 0)) + T(' 个胶囊'),
               }, kwAll ? T('收起') : '…')
             : null,
           h('span', { key: 'sp', style: { flex: '0 0 8px' } }),
@@ -1163,8 +1163,12 @@ window.__ModuleLoader__.load({
               },
             }),
             tagOpen ? (() => {
-              const cand = tagOptions.filter((o) => !fTags.includes(o.tag) && (!tagInput || o.tag.includes(tagInput)))
-              if (!cand.length) return null
+              const all = tagOptions.filter((o) => !fTags.includes(o.tag) && (!tagInput || o.tag.includes(tagInput)))
+              if (!all.length) return null
+
+              const CAP = 200
+              const cand = all.length > CAP ? all.slice(0, CAP) : all
+              const rest = all.length - cand.length
               return h('div', {
                 style: {
                   position: 'absolute', top: '100%', left: 0, marginTop: 3, zIndex: 60,
@@ -1180,7 +1184,11 @@ window.__ModuleLoader__.load({
                 },
                 onMouseDown: (e) => e.preventDefault(),
                 onClick: () => { setFTags([...fTags, o.tag]); setTagInput(''); setTagOpen(false) },
-              }, h('span', null, o.tag), h('span', { style: { opacity: 0.45 } }, o.n))))
+              }, h('span', null, o.tag), h('span', { style: { opacity: 0.45 } }, o.n))),
+              rest > 0 ? h('div', {
+                key: '__rest',
+                style: { padding: '4px 9px', fontSize: 11, opacity: 0.5, borderTop: '1px solid ' + LINE },
+              }, '还有 ' + rest + ' 个 · 继续输入缩小范围') : null)
             })() : null,
           ),
           ),

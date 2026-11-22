@@ -86,6 +86,8 @@ const HHMM_RE = /^(\d{1,2}:\d{2})(?:\s*[~～\-—]\s*(\d{1,2}:\d{2}))?/
 const DATE_RE = /(\d{4}-\d{2}-\d{2})/
 const FM_HEAD_RE = /^---\n([\s\S]*?)\n---\n/
 
+const FM_KEEP = ['title', 'description', 'tags', 'category', 'name']
+
 const pad5 = (v) => (v.length === 4 ? '0' + v : v)
 const padTs = (v) => (!v ? v : (v.length === 16 ? v + ':00' : v))
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -220,8 +222,9 @@ function skillFiles(home) {
   } catch { return [] }
 }
 
-const CHUNK_TARGET = {}
-const CHUNK_VERSION = 'v2-priv800'
+const CHUNK_TARGET = { private: 800 }
+
+const CHUNK_VERSION = 'v3-fmhead'
 
 function chunkText(text, target = 400, hard = 1600) {
   const out = []
@@ -231,7 +234,21 @@ function chunkText(text, target = 400, hard = 1600) {
   const flush = () => {
     if (buf.length) { out.push([startLine, buf.join('\n')]); buf = [] }
   }
-  for (const raw of text.split('\n')) {
+
+  let body = text
+  let baseLine = 1
+  const _fm = FM_HEAD_RE.exec(text)
+  if (_fm) {
+    const head = []
+    for (const line of _fm[1].split('\n')) {
+      if (FM_KEEP.includes(line.split(':')[0].trim())) head.push(line.trim())
+    }
+    if (head.length) out.push([1, head.join('\n')])
+    body = text.slice(_fm[0].length)
+    baseLine = (_fm[0].match(/\n/g) || []).length + 1
+  }
+  startLine = curLine = baseLine
+  for (const raw of body.split('\n')) {
     if (raw.trim() === '') { flush(); startLine = curLine + 1 }
     else { if (!buf.length) startLine = curLine; buf.push(raw) }
     curLine += 1
@@ -367,12 +384,24 @@ let _kwCache = null, _kwAt = 0
 
 function chipsOfHead(head) {
   const out = new Set()
-  const m = /^keywords:\s*"?([^"\n]+)"?/m.exec(head)
-  if (!m) return []
-  for (const t of m[1].replace(/^\[|\]$/g, '').split(/[\s,，、]+/)) {
-    const v = t.trim().replace(/^["']|["']$/g, '')
-    if (v) out.add(v)
+  const push = (s) => {
+    for (const t of s.replace(/^\[|\]$/g, '').split(/[\s,，、]+/)) {
+      const v = t.trim().replace(/^["']|["']$/g, '')
+      if (v) out.add(v)
+    }
   }
+
+  const arr = /^tags:\s*\n((?:[ \t]+-.*\n?)+)/m.exec(head)
+  if (arr) {
+    for (const line of arr[1].split('\n')) {
+      const v = line.replace(/^[ \t]*-[ \t]*/, '').trim().replace(/^["']|["']$/g, '')
+      if (v) out.add(v)
+    }
+    return [...out]
+  }
+
+  const one = /^tags:\s*"?([^"\n]+)"?/m.exec(head)
+  if (one) push(one[1])
   return [...out]
 }
 
@@ -525,7 +554,7 @@ function scoreRows(rows, query, minWcov = 0.25, wantWhy = false) {
     }
     let _isHead = false
     if (Number(r.line) === 1 && /(?:title|description|name):/.test(r.body)) { score += exact * 20 + cov * 3; _isHead = true }
-    const kwm = /keywords:([^\n]*)/.exec(r.body)
+    const kwm = /tags:([^\n]*)/.exec(r.body)
     let _kh = 0
     if (kwm) {
       const kw = kwm[1].toLowerCase()
@@ -671,7 +700,7 @@ function parseFrontmatter(text) {
   return { meta, raw, body }
 }
 
-const FM_HUMAN = ["title", "description", "category", "keywords", "tags", "status", "created_at", "updated_at", "name"]
+const FM_HUMAN = ["title", "description", "category", "tags", "status", "created_at", "updated_at", "name"]
 const FM_MACHINE = ["id", "content_hash", "source_paths", "session_ids", "memory_body_ids",
   "snippet_from"]
 
@@ -753,6 +782,10 @@ function groupOf(layer, file, text) {
     const dir = basename(dirname(file))
     return dir === 'daily' ? basename(file).replace(/\.md$/i, '') : dir
   }
+  if (layer === 'profiles') {
+    const dir = basename(dirname(file))
+    return dir === 'users' ? '👤 users' : '👥 groups'
+  }
   return ''
 }
 
@@ -770,16 +803,18 @@ function groupDirOf(layer, file) {
     if (file.includes('logs/skills/')) return dirname(dirname(file))
     return ''
   }
+  if (layer === 'profiles') return dirname(file)
   return ''
 }
 
 const LAYER_DIRS = {
   docs: 'docs', skills: 'skills', daily: 'daily',
   reviews: 'reviews', log: 'logs', bin: 'bin',
+  profiles: 'profiles',
 }
 
 const _treeCache = new Map()
-const _TREE_CACHE_VER = 10
+const _TREE_CACHE_VER = 11
 
 function _fileSig(st) {
   return `${st.mtimeMs}:${st.size}`
@@ -888,8 +923,10 @@ function tablesFor(lf, zone) {
   if (zone === 'cold') return ['chunks_record']
   if (zone === 'both' || zone === 'all' || zone === true) return ALL_TABLES
   if (zone === 'hot') return ['chunks']
-  if (!lf || !lf.size) return ['chunks']
-  for (const x of lf) if (x in hotWindowDefaults()) return ALL_TABLES
+
+  if (!lf || !lf.size) return ALL_TABLES
+
+  for (const x of lf) if (x in hotWindowDefaults() || x === 'skills') return ALL_TABLES
   return ['chunks']
 }
 
@@ -1325,6 +1362,8 @@ export function apply(ctx, config = {}) {
         if (v === undefined) continue
         if (Array.isArray(v)) {
           if (!v.length) { lines.push(k + ': []'); continue }
+
+          if (k === 'tags' || k === 'keywords') { lines.push(k + ': ' + JSON.stringify(v.join(' '))); continue }
           lines.push(k + ':')
           for (const x of v) lines.push('  - ' + JSON.stringify(String(x)))
         } else {
@@ -1546,7 +1585,7 @@ export function apply(ctx, config = {}) {
       try {
         mkdirSync(dirname(f), { recursive: true })
         if (!existsSync(f)) {
-          writeFileSync(f, `---\ntitle: "daily 精选：从流水里捞出来的好条目"\ndescription: "记忆面板里点「提到热区」的条目会累积到这里。它在 docs 层，永远在热区，不会被 mem-rotate 搬走"\ncategory: "上下文"\ncreated_at: "${now}"\nupdated_at: "${now}"\nkeywords: "精选 提到热区 pin 流水 好条目 daily"\n---\n## daily 精选\n\n从 daily / logs 里捞出来的、值得长期留着的条目，每条注明出处。\n`, 'utf8')
+          writeFileSync(f, `---\ntitle: "daily 精选：从流水里捞出来的好条目"\ndescription: "记忆面板里点「提到热区」的条目会累积到这里。它在 docs 层，永远在热区，不会被 mem-rotate 搬走"\ncategory: "上下文"\ncreated_at: "${now}"\nupdated_at: "${now}"\ntags: "精选 提到热区 pin 流水 好条目 daily"\n---\n## daily 精选\n\n从 daily / logs 里捞出来的、值得长期留着的条目，每条注明出处。\n`, 'utf8')
         }
         appendFileSync(f, block, 'utf8')
         let t = readFileSync(f, 'utf8')
@@ -1655,16 +1694,10 @@ export function apply(ctx, config = {}) {
         }
         if (url.pathname === '/memory-xfy/tags') {
           try {
+
             const counts = new Map()
             for (const tags of tagMapOf(db).byPath.values()) {
               for (const t of tags) counts.set(t, (counts.get(t) || 0) + 1)
-            }
-            const kwCounts = new Map()
-            for (const kws of kwMapOf(db).values()) {
-              for (const t of kws) kwCounts.set(t, (kwCounts.get(t) || 0) + 1)
-            }
-            for (const [t, n] of kwCounts) {
-              if (n >= 2 && !counts.has(t)) counts.set(t, n)
             }
             const list = [...counts.entries()]
               .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
