@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync, sta
 import { execFileSync } from 'node:child_process'
 import { join, dirname, basename, resolve, sep, extname, relative } from 'node:path'
 import { homedir } from 'node:os'
-import { createHash } from 'node:crypto'
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { privateDecrypt, privateEncrypt } from './private.mjs'
 
 export const name = 'memory-xfy'
@@ -1217,6 +1217,56 @@ function saveSkill(home, skillName, body, { description, indexPath } = {}) {
   return { file: short(file), indexed }
 }
 
+function b64uDecode(v) {
+  const t = String(v).replace(/-/g, '+').replace(/_/g, '/')
+  return Buffer.from(t + '='.repeat((4 - t.length % 4) % 4), 'base64')
+}
+function b64uEncode(buf) {
+  return Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function authOk(req, home) {
+
+  const hdr = (n) => (typeof req.headers?.get === 'function' ? req.headers.get(n) : req.headers?.[n]) || ''
+  const host = String(hdr('host'))
+  if (host) {
+    try {
+      const y = readFileSync(join(home, '.credentials.yaml'), 'utf8')
+      const m = /client-connection\/browser-session:[\s\S]*?secret:\s*(\S+)/.exec(y)
+      if (m) {
+        const secret = b64uDecode(m[1])
+        const want = 'dsh-auth-' + b64uEncode(createHash('sha256').update(host).digest())
+        for (const seg of String(hdr('cookie')).split(';')) {
+          const at = seg.indexOf('=')
+          if (at === -1 || seg.slice(0, at).trim() !== want) continue
+          const parts = seg.slice(at + 1).trim().split('.')
+          if (parts.length !== 3 || parts[0] !== 'v1') break
+          const sig = b64uDecode(parts[2])
+          const expect = createHmac('sha256', secret).update(parts[1]).digest()
+          if (sig.length === expect.length && timingSafeEqual(sig, expect)) {
+            const payload = JSON.parse(b64uDecode(parts[1]).toString('utf8'))
+            if (Number(payload.expiresAt) > Date.now()) return true
+          }
+        }
+      }
+    } catch {  }
+  }
+  try {
+    const t = new URL(req.url, 'http://127.0.0.1').searchParams.get('token')
+    if (t) {
+      const m = /[?&]token=([^&\s]+)/.exec(readFileSync(join(home, 'web-url.txt'), 'utf8'))
+      if (m && t === decodeURIComponent(m[1])) return true
+    }
+  } catch {  }
+  return false
+}
+
+function originOk(req) {
+  const o = req.headers.origin
+  if (!o) return true
+  try { return new URL(o).host === (req.headers.host || '') } catch { return false }
+}
+
 export function apply(ctx, config = {}) {
   const home = config.home || process.env.DSH_HOME || join(homedir(), '.dsh')
   const dbPath = config.dbPath || join(home, 'cache', 'mem.db')
@@ -1602,9 +1652,11 @@ export function apply(ctx, config = {}) {
       path: '/memory-xfy',
       resource: async (req) => {
         const url = new URL(req.url, 'http://127.0.0.1')
-        const json = (obj) => new Response(JSON.stringify(obj), {
+        const json = (obj, code = 200) => new Response(JSON.stringify(obj), {
+          status: code,
           headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
         })
+        if (!authOk(req, home)) return json({ ok: false, error: '未登录：缺 dsh-auth cookie 或 ?token=' }, 403)
         if (url.pathname === '/memory-xfy/stats') {
           try {
             const _t0 = Date.now()
@@ -1807,6 +1859,7 @@ export function apply(ctx, config = {}) {
             res.end(JSON.stringify(obj))
           }
           if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
           try {
             const chunks = []
             for await (const c of req) chunks.push(c)
@@ -1828,6 +1881,7 @@ export function apply(ctx, config = {}) {
             res.end(JSON.stringify(obj))
           }
           if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
           try {
             const chunks = []
             for await (const c of req) chunks.push(c)
@@ -1848,6 +1902,7 @@ export function apply(ctx, config = {}) {
             res.end(JSON.stringify(obj))
           }
           if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
           try {
             const chunks = []
             for await (const c of req) chunks.push(c)
@@ -1868,6 +1923,7 @@ export function apply(ctx, config = {}) {
             res.end(JSON.stringify(obj))
           }
           if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
           try {
             const chunks = []
             for await (const c of req) chunks.push(c)
@@ -1890,6 +1946,7 @@ export function apply(ctx, config = {}) {
             res.end(JSON.stringify(obj))
           }
           if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
           try {
             const chunks = []
             for await (const c of req) chunks.push(c)

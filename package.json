@@ -22,7 +22,7 @@
     "plugin"
   ],
   "bin": {
-    "dsh-memory-init": "./bin/init.js"
+    "dsh-memory-init": "bin/init.js"
   },
   "exports": {
     ".": "./index.js",
