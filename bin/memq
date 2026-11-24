@@ -5,7 +5,6 @@ from datetime import date
 HOME = pathlib.Path.home()
 DB = pathlib.Path(os.environ.get("MEMQ_DB") or (HOME / ".dsh" / "cache" / "mem.db"))
 SIGNALS = HOME / ".dsh" / "cache" / "mem-signals.json"
-TAGS_FILE = HOME / ".dsh" / "tags.json"
 ACCESS_LOG = HOME / ".dsh" / "cache" / "mem-access.jsonl"
 
 _LAYERS_JSON = HOME / ".dsh" / "layers.json"
@@ -451,8 +450,6 @@ def _importance_old(path):
     except Exception:
         return 50.0
 
-_TAG_CACHE = None
-
 def _tag_map(tags=None):
     want = list(tags or [])
     out = set()
@@ -636,7 +633,6 @@ def _env_filters():
         "maximp": float(g("MEMQ_MAX_IMP") or 100),
     }
 
-_RECORD_LAYERS = {"daily", "log"}
 _ALL_TABLES = ("chunks", "chunks_record")
 
 _HOT_WINDOW = {L["name"]: max(0, int(L["window"]))
