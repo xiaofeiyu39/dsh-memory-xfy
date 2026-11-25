@@ -1089,7 +1089,10 @@ def search(q, n=8):
         _rest = folded[0][0][5:] or ("",)
         _m = re.search(r"覆盖 (\d+)/(\d+)", str(_rest[0]))
         if _m and int(_m.group(2)) > 1 and int(_m.group(1)) * 2 < int(_m.group(2)):
-            print(f"（⚠️ 只命中 {_m.group(1)}/{_m.group(2)} 个词——可能是拿一个泛词凑出来的，当线索看）")
+            if not _json:
+                print(f"（⚠️ 只命中 {_m.group(1)}/{_m.group(2)} 个词——可能是拿一个泛词凑出来的，当线索看）")
+            else:
+                notes.append(f"只命中 {_m.group(1)}/{_m.group(2)} 个词（可能是泛词凑的）")
     for row, seg_n in folded:
         score, body, path, layer, line = row[0], row[1], row[2], row[3], row[4]
         rest = row[5:]
