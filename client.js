@@ -461,11 +461,13 @@ window.__ModuleLoader__.load({
       const [tagInput, setTagInput] = React.useState('')
       const [tagOpen, setTagOpen] = React.useState(false)
       const [tagOptions, setTagOptions] = React.useState([])
+
+      const [allTags, setAllTags] = React.useState([])
       React.useEffect(() => {
         fetch('/memory-xfy/tags')
           .then((r) => r.json())
-          .then((d) => setTagOptions(d.tags || []))
-          .catch(() => setTagOptions([]))
+          .then((d) => { setAllTags(d.tags || []); setTagOptions(d.tags || []) })
+          .catch(() => { setAllTags([]); setTagOptions([]) })
       }, [])
 
       const [catOptions, setCatOptions] = React.useState([])
@@ -2283,7 +2285,8 @@ window.__ModuleLoader__.load({
               const slash = tagInput.startsWith('/')
               const qText = slash ? tagInput.slice(1) : tagInput
 
-              const all = tagOptions.filter((o) => !tagSeq.some((y) => y.k === 'tag' && y.v === o.tag)
+              const pool = slash ? allTags : tagOptions
+              const all = pool.filter((o) => !tagSeq.some((y) => y.tag === o.tag)
                 && (!qText || o.tag.includes(qText)))
 
               if (!slash && !all.length) return null
