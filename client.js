@@ -1663,12 +1663,6 @@ window.__ModuleLoader__.load({
             }, preview ? T('编辑') : T('预览')),
             dirty ? h('span', { key: 'd', style: { color: '#e8a33d' } }, T('● 未保存')) : null,
           ) : null,
-          h('div', { key: 'foldbar', style: { display: 'flex', justifyContent: 'flex-end' } },
-            h('button', {
-              key: 'fold', style: { ...S.button, padding: '1px 9px', fontSize: 11.5, opacity: 0.6 },
-              title: headOpen ? T('收起上方标题 / tags / 简介') : T('展开上方标题 / tags / 简介'),
-              onClick: () => setHeadOpen(!headOpen),
-            }, headOpen ? '▴' : '▾')),
           headOpen ? h(MetaCard, {
             key: 'meta', meta: sel.meta, human: sel.human, machine: sel.machine,
             onSave: saveMeta, busy, readOnly: readonlyHere,
@@ -2539,6 +2533,21 @@ window.__ModuleLoader__.load({
               },
             }, treeOpen ? '‹' : '›')),
           h('div', { style: S.editorBox }, editor),
+
+          h('div', {
+            key: 'foldstrip',
+            style: { flex: '0 0 9px', alignSelf: 'stretch', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+          },
+            h('div', {
+              title: headOpen ? T('收起上方标题 / tags / 简介') : T('展开上方标题 / tags / 简介'),
+              onClick: () => setHeadOpen(!headOpen),
+              style: {
+                width: 9, height: 44, lineHeight: '42px', textAlign: 'center',
+                fontSize: 11, borderRadius: 5, border: '1px solid ' + LINE,
+                background: 'Canvas', color: 'inherit', cursor: 'pointer',
+                opacity: 0.6, userSelect: 'none',
+              },
+            }, headOpen ? '▴' : '▾')),
         ),
       )
     }
