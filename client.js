@@ -683,6 +683,8 @@ window.__ModuleLoader__.load({
       const [confirmDel, setConfirmDel] = React.useState(false)
       const [preview, setPreview] = React.useState(true)
 
+      const [headOpen, setHeadOpen] = React.useState(true)
+
       const safeMd = React.useMemo(() => {
         try {
           let t = String(draft)
@@ -1619,7 +1621,8 @@ window.__ModuleLoader__.load({
             + T('- 长文档可以直接往下滚，不用挤在小窗里'))))
       } else if (sel.mode === 'file') {
         editor = [
-          h('div', { key: 'head', style: { display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', fontSize: 12.5 } },
+
+          headOpen ? h('div', { key: 'head', style: { display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', fontSize: 12.5 } },
             h('span', {
               key: 't',
               style: { flex: '1 1 100%', opacity: 0.78, lineHeight: 1.45, wordBreak: 'break-word' },
@@ -1659,11 +1662,17 @@ window.__ModuleLoader__.load({
               onClick: () => setPreview(!preview),
             }, preview ? T('编辑') : T('预览')),
             dirty ? h('span', { key: 'd', style: { color: '#e8a33d' } }, T('● 未保存')) : null,
-          ),
-          h(MetaCard, {
+          ) : null,
+          h('div', { key: 'foldbar', style: { display: 'flex', justifyContent: 'flex-end' } },
+            h('button', {
+              key: 'fold', style: { ...S.button, padding: '1px 9px', fontSize: 11.5, opacity: 0.6 },
+              title: headOpen ? T('收起上方标题 / tags / 简介') : T('展开上方标题 / tags / 简介'),
+              onClick: () => setHeadOpen(!headOpen),
+            }, headOpen ? '▴' : '▾')),
+          headOpen ? h(MetaCard, {
             key: 'meta', meta: sel.meta, human: sel.human, machine: sel.machine,
             onSave: saveMeta, busy, readOnly: readonlyHere,
-          }),
+          }) : null,
           preview
             ? h('div', { key: 'pv', style: S.previewBox }, safeMd)
             : h('textarea', {
