@@ -979,8 +979,13 @@ function openDb(dbPath) {
 }
 
 function syncFacets(db, home) {
+
   const catN = new Map()
   const tagN = new Map()
+  const bump = (map, zone, value) => {
+    const k = zone + '\u0000' + value
+    map.set(k, (map.get(k) || 0) + 1)
+  }
 
   const HDR = 16384
   for (const [, files] of layers(home)) {
@@ -996,29 +1001,33 @@ function syncFacets(db, home) {
       const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)
       if (!m) continue
       const fm = m[1]
+      const zone = isArchived(f) ? 'cold' : 'hot'
       const cv = /^category\s*:\s*(.*)$/m.exec(fm)
       if (cv) {
         const v = cv[1].trim().replace(/^["']|["']$/g, '')
         for (const part of v.split(/[,，、]+/)) {
           const x = part.trim()
-          if (x) catN.set(x, (catN.get(x) || 0) + 1)
+          if (x) bump(catN, zone, x)
         }
       }
       const tv = /^tags\s*:\s*(.*)$/m.exec(fm)
       if (tv) {
         const v = tv[1].trim().replace(/^["']|["']$/g, '')
-        for (const x of v.split(/[\s,]+/)) if (x) tagN.set(x, (tagN.get(x) || 0) + 1)
+        for (const x of v.split(/[\s,]+/)) if (x) bump(tagN, zone, x)
       }
     }
   }
+
   db.exec(`CREATE TABLE IF NOT EXISTS facets(
-    kind TEXT NOT NULL, value TEXT NOT NULL, n INT NOT NULL,
-    PRIMARY KEY (kind, value)) WITHOUT ROWID`)
+    kind TEXT NOT NULL, zone TEXT NOT NULL, value TEXT NOT NULL, n INT NOT NULL,
+    PRIMARY KEY (kind, zone, value)) WITHOUT ROWID`)
   db.prepare('DELETE FROM facets').run()
-  const ins = db.prepare('INSERT OR REPLACE INTO facets(kind, value, n) VALUES(?,?,?)')
-  for (const [v, n] of catN) ins.run('category', v, n)
-  for (const [v, n] of tagN) ins.run('tag', v, n)
-  return { categories: catN.size, tags: tagN.size }
+  const ins = db.prepare('INSERT OR REPLACE INTO facets(kind, zone, value, n) VALUES(?,?,?,?)')
+  for (const [k, n] of catN) { const [z, v] = k.split('\u0000'); ins.run('category', z, v, n) }
+  for (const [k, n] of tagN) { const [z, v] = k.split('\u0000'); ins.run('tag', z, v, n) }
+
+  const distinct = (m) => new Set([...m.keys()].map((k) => k.split('\u0000')[1])).size
+  return { categories: distinct(catN), tags: distinct(tagN) }
 }
 
 function indexAll(db, home, { quiet = true } = {}) {
