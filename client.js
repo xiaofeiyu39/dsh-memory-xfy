@@ -97,26 +97,17 @@ window.__ModuleLoader__.load({
     ]
 
     function appendTag(seq, tag, sym) {
-      const kept = seq.filter((y) => !(y.k === 'tag' && y.v === tag))
+      const kept = (seq || []).filter((y) => y.tag !== tag)
       const last = kept[kept.length - 1]
-      const hasSym = last && last.k === 'sym' && last.v !== '(' && last.v !== ')'
-      return hasSym ? [...kept, { k: 'tag', v: tag }] : [...kept, { k: 'sym', v: sym || '+' }, { k: 'tag', v: tag }]
+      const hasLone = last && !last.tag && last.sym !== '(' && last.sym !== ')'
+
+      return hasLone
+        ? [...kept.slice(0, -1), { sym: last.sym, tag }]
+        : [...kept, { sym: sym || '+', tag }]
     }
 
     function seqPairs(seq) {
-      const out = []
-      let pending = ''
-      for (const x of seq || []) {
-        if (!x) continue
-        if (x.k === 'sym') {
-          if (x.v === '(' || x.v === ')') { out.push([x.v, '']); pending = '' }
-          else pending = x.v
-        } else if (x.k === 'tag' && x.v) {
-          out.push([pending || '+', x.v])
-          pending = ''
-        }
-      }
-      return out
+      return (seq || []).map((x) => [x.sym, x.tag || ''])
     }
 
     function MultiSelect({ allLabel, options, value, onChange, onOpen }) {
@@ -467,7 +458,6 @@ window.__ModuleLoader__.load({
 
       const [tagSeq, setTagSeq] = React.useState([])
       const [tagCursor, setTagCursor] = React.useState(-1)
-      const [pendingSym, setPendingSym] = React.useState('+')
       const [tagInput, setTagInput] = React.useState('')
       const [tagOpen, setTagOpen] = React.useState(false)
       const [tagOptions, setTagOptions] = React.useState([])
@@ -1233,9 +1223,9 @@ window.__ModuleLoader__.load({
       const tagBad = React.useMemo(() => {
         const st = []
         for (const x of tagSeq) {
-          if (x.k !== 'sym') { if (st.length) st[st.length - 1] += 1; continue }
-          if (x.v === '(') st.push(0)
-          else if (x.v === ')') {
+          if (x.tag) { if (st.length) st[st.length - 1] += 1; continue }
+          if (x.sym === '(') st.push(0)
+          else if (x.sym === ')') {
             if (!st.length || st[st.length - 1] === 0) return T('tag 条件不合法')
             st.pop()
             if (st.length) st[st.length - 1] += 1
@@ -2186,39 +2176,50 @@ window.__ModuleLoader__.load({
           },
 
             tagSeq.map((it, i) => {
-              const isSym = it.k === 'sym'
-              const isParen = isSym && (it.v === '(' || it.v === ')')
+              const isLone = !it.tag
+              const isParen = isLone && (it.sym === '(' || it.sym === ')')
               const sel = tagCursor === i
-              const tone = !isSym
-                ? (sel ? ['rgba(99,102,241,.30)', 'rgba(99,102,241,.75)'] : ['rgba(128,128,128,.13)', LINE])
-                : isParen ? ['rgba(148,163,184,.26)', 'rgba(148,163,184,.55)']
-                  : it.v === '-' ? ['rgba(239,68,68,.20)', 'rgba(239,68,68,.5)']
-                    : it.v === '|' ? ['rgba(245,158,11,.20)', 'rgba(245,158,11,.55)']
-                      : ['rgba(99,102,241,.22)', 'rgba(99,102,241,.5)']
-              const click = (e) => {
+              const tone = isParen ? ['rgba(148,163,184,.26)', 'rgba(148,163,184,.55)']
+                : it.sym === '-' ? ['rgba(239,68,68,.20)', 'rgba(239,68,68,.5)']
+                  : it.sym === '|' ? ['rgba(245,158,11,.20)', 'rgba(245,158,11,.55)']
+                    : ['rgba(99,102,241,.22)', 'rgba(99,102,241,.5)']
+              const drop = (e) => {
+                e.stopPropagation()
+                const next = tagSeq.filter((_y, j) => j !== i)
+                setTagSeq(next); setTagCursor(-1)
+                if (next.length) { loadFacets({ tagSeq: next }); setTagOpen(true) }
+              }
+              const flip = (e) => {
                 e.stopPropagation()
                 setTagCursor(i)
-                if (!isSym) return
                 setTagSeq(tagSeq.map((y, j) => {
                   if (j !== i) return y
-                  if (y.v === '(') return { k: 'sym', v: ')' }
-                  if (y.v === ')') return { k: 'sym', v: '(' }
-                  return { k: 'sym', v: y.v === '+' ? '|' : y.v === '|' ? '-' : '+' }
+                  if (y.sym === '(') return { sym: ')', tag: y.tag || '' }
+                  if (y.sym === ')') return { sym: '(', tag: y.tag || '' }
+                  return { sym: y.sym === '+' ? '|' : y.sym === '|' ? '-' : '+', tag: y.tag || '' }
                 }))
               }
               return h('span', {
                 key: 'tg' + i,
-                onClick: click,
-                title: !isSym ? T('光标放这里 · 退格删除这个 tag（符号会留下）')
-                  : isParen ? T('括号 · 点一下切 ( ↔ )') : T('点一下切换：+ 与 → | 或 → - 非'),
+                onClick: (e) => { e.stopPropagation(); setTagCursor(i) },
+                title: isParen ? T('括号 · 点一下切 ( ↔ )') : T('点符号切换 与 → 或 → 非 · × 删除'),
                 style: {
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  minWidth: isSym ? 15 : 0, padding: isSym ? '0 3px' : '0 4px', borderRadius: 4,
-                  fontSize: 11, fontWeight: isSym ? 700 : 400, whiteSpace: 'nowrap',
+                  display: 'inline-flex', alignItems: 'center', gap: 2,
+                  padding: '0 2px 0 3px', borderRadius: 4, fontSize: 11, whiteSpace: 'nowrap',
                   cursor: 'pointer', background: tone[0], border: '1px solid ' + tone[1],
                   outline: sel ? '2px solid rgba(99,102,241,.8)' : 'none',
                 },
-              }, it.v)
+              },
+                h('span', {
+                  onClick: flip,
+                  style: { fontWeight: 700, padding: '0 2px 0 1px', cursor: 'pointer' },
+                }, it.sym),
+                isLone ? null : h('span', { style: { cursor: 'pointer' } }, it.tag),
+                h('span', {
+                  onClick: drop,
+                  title: T('删除这个条件'),
+                  style: { cursor: 'pointer', opacity: 0.7, fontWeight: 700, padding: '0 2px' },
+                }, '×'))
             }),
             h('input', {
               value: tagInput,
@@ -2237,14 +2238,13 @@ window.__ModuleLoader__.load({
                   const raw = tagInput.trim()
 
                   if (raw === '(' || raw === ')') {
-                    setTagSeq([...tagSeq, { k: 'sym', v: raw }])
+                    setTagSeq([...tagSeq, { sym: raw }])
                     setTagInput(''); return
                   }
                   const t = raw.startsWith('/') ? raw.slice(1) : raw
                   if (t) {
-                    const next = appendTag(tagSeq, t, pendingSym)
+                    const next = appendTag(tagSeq, t)
                     setTagSeq(next)
-                    setPendingSym('+')
 
                     loadFacets({ tagSeq: next })
                     setTagInput('')
@@ -2301,16 +2301,12 @@ window.__ModuleLoader__.load({
                 onMouseDown: (e) => e.preventDefault(),
                 title: sym === '(' || sym === ')' ? T('插入一个括号') : T('下一个 tag 用这个符号'),
                 onClick: () => {
-                  if (sym === '(' || sym === ')') {
-                    const next = [...tagSeq, { k: 'sym', v: sym }]
-                    setTagSeq(next)
-                    setTagInput('')
-                    loadFacets({ tagSeq: next })
-                  } else {
-                    setPendingSym(sym)
-                    setTagInput('')
-                    setTimeout(() => setTagOpen(true), 0)
-                  }
+
+                  const next = [...tagSeq, { sym }]
+                  setTagSeq(next)
+                  setTagInput('')
+                  loadFacets({ tagSeq: next })
+                  setTagOpen(true)
                 },
                 style: {
                   padding: '1px 7px', borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: 'pointer',
@@ -2335,9 +2331,8 @@ window.__ModuleLoader__.load({
                 },
                 onMouseDown: (e) => e.preventDefault(),
                 onClick: () => {
-                  const next = appendTag(tagSeq, o.tag, pendingSym)
+                  const next = appendTag(tagSeq, o.tag)
                   setTagSeq(next)
-                  setPendingSym('+')
                   setTagInput('')
 
                   loadFacets({ tagSeq: next }); setTagOpen(true)
