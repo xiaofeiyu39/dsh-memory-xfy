@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync, statSync, renameSync, readdirSync, unlinkSync, rmdirSync, rmSync, cpSync, openSync, readSync, closeSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join, dirname, basename, resolve, sep, extname, relative } from 'node:path'
-import { homedir } from 'node:os'
+import { homedir, networkInterfaces } from 'node:os'
 import { createHash, createHmac, timingSafeEqual, randomBytes } from 'node:crypto'
 import { privateDecrypt, privateEncrypt } from './private.mjs'
 
@@ -70,9 +70,89 @@ const CONFIG_DEFAULT = {
   shareInclude: [],
 
   acl: {},
+
+  syncOnUse: true,
+
+  syncThrottleSec: 30,
+
+  lastSyncAt: '',
+  lastSyncText: '',
 }
 
 function configFilePath(home) { return join(home, 'config', 'memory-xfy.json') }
+
+function lanIps() {
+  const out = []
+  for (const list of Object.values(networkInterfaces() || {})) {
+    for (const a of list || []) if (a.family === 'IPv4' && !a.internal) out.push(a.address)
+  }
+  return out
+}
+
+const localStamp = (d = new Date()) => {
+  const p2 = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ` +
+    `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`
+}
+function syncLog(home, line) {
+  try {
+    const f = join(home, 'logs', 'mem-sync.log')
+    mkdirSync(dirname(f), { recursive: true })
+    appendFileSync(f, line + '\n', 'utf8')
+  } catch (e) { console.warn('[memory-xfy] 写同步日志失败：', String(e)) }
+}
+
+let syncBusy = false
+let syncLastCheck = 0
+async function maybeSync(home, why, port) {
+  let cfg
+  try { cfg = readPluginConfig(home) } catch (e) { return { ok: false, skipped: 'config', error: String(e) } }
+  if (cfg.syncOnUse === false) return { ok: true, skipped: 'off' }
+  if (!String(cfg.remoteUrl || '').trim() || !String(cfg.remoteToken || '').trim()) return { ok: true, skipped: 'no-remote' }
+  if (syncBusy) return { ok: true, skipped: 'busy' }
+  const gap = (Number(cfg.syncThrottleSec) || 30) * 1000
+  const now = Date.now()
+  if (now - syncLastCheck < gap) return { ok: true, skipped: 'throttle' }
+  syncLastCheck = now
+  syncBusy = true
+  const t0 = now
+  try {
+
+    const r = await fetch(`http://127.0.0.1:${port}/memory-xfy/remote`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'sync', payload: { protocol: 1, changes: [] } }),
+      signal: AbortSignal.timeout(120000),
+    })
+    const j = await r.json().catch(() => ({}))
+    const ms = Date.now() - t0
+    const pulled = (j.files || []).length
+    if (!j.ok) {
+      const err = j.error || ('HTTP ' + r.status)
+      syncLog(home, `[${localStamp()}] ${why} · 失败：${err} · ${ms}ms`)
+      return { ok: false, error: err }
+    }
+    const conf = (j.conflicts || []).length
+    const text = (pulled || j.applied || conf || j.merged || j.cleaned)
+      ? `拉回 ${pulled} · 落地 ${j.applied || 0} · 保持本地 ${j.kept || 0} · 冲突 ${conf}` +
+        (j.merged ? ` · 合并 ${j.merged}` : '') + (j.cleaned ? ` · 清掉旧副稿 ${j.cleaned}` : '')
+      : '一致，无需更新'
+
+    const servedAt = typeof j.servedAt === 'string' && j.servedAt ? j.servedAt : ''
+    syncLog(home, `[${localStamp()}] ${why} · ${text} · ${ms}ms` +
+      (servedAt ? ` · 服务端 ${servedAt}` : ' · 服务端没回时间（mem-serve 版本旧？）'))
+    try {
+      writePluginConfig(home, { lastSyncAt: servedAt || localStamp(), lastSyncText: text })
+    } catch (e) { console.warn('[memory-xfy] 记上次同步时间失败：', String(e)) }
+    return { ok: true, pulled, applied: j.applied || 0, text }
+  } catch (e) {
+    const ms = Date.now() - t0
+    syncLog(home, `[${localStamp()}] ${why} · 失败：${String((e && e.message) || e)} · ${ms}ms`)
+    return { ok: false, error: String((e && e.message) || e) }
+  } finally {
+    syncBusy = false
+  }
+}
 
 function deleteToken(home, tok) {
   const f = join(home, 'mem-serve.json')
@@ -84,6 +164,17 @@ function deleteToken(home, tok) {
   const tmp = f + '.tmp'
   writeFileSync(tmp, JSON.stringify(raw, null, 2) + '\n', 'utf8')
   renameSync(tmp, f)
+
+  try {
+    const cfg = readPluginConfig(home)
+    if (cfg.acl && cfg.acl[tok]) {
+      const next = { ...cfg.acl }
+      delete next[tok]
+      writePluginConfig(home, { acl: next })
+    }
+  } catch (e) {
+    console.warn('[memory-xfy] 删 token 后清 acl 失败（token 本身已删掉）：', String(e))
+  }
   return { ok: true, removed: spec.name || tok.slice(0, 8) }
 }
 
@@ -1923,6 +2014,8 @@ export function apply(ctx, config = {}) {
         : `[${h.layer}] ${h.path}:${h.line}\n  ${h.snippet}`)).join('\n\n') || '（没有命中）'),
     },
     execute: async ({ query, limit, layer, must, not, path, category, since, after, before, createdAfter, createdBefore, modifiedAfter, modifiedBefore, tags }) => {
+
+      await maybeSync(home, 'mem_search', webServer.port)
       ensureFresh()
       const all = search(db, query, 10 ** 6, layer, { must, not, path, category, since, after, before, createdAfter, createdBefore, modifiedAfter, modifiedBefore, tags })
       const lim = limit || 20
@@ -1952,6 +2045,8 @@ export function apply(ctx, config = {}) {
       render: (_a, v) => text(v.brief || '（没有相关内容）'),
     },
     execute: async ({ query, budget }) => {
+
+      await maybeSync(home, 'mem_pack', webServer.port)
       ensureFresh()
       const { picked, used } = pack(db, query, 10, budget || 6000)
       const brief = picked.length
@@ -2276,8 +2371,17 @@ export function apply(ctx, config = {}) {
             const layers = readLayersFile(home)
             let dbBytes = null
             try { dbBytes = statSync(dbPath).size } catch {  }
+
+            let lastShare = null
+            try { lastShare = JSON.parse(readFileSync(join(home, 'cache', 'last-share.json'), 'utf8')) } catch {  }
             return json({ ok: true, config: cfg, layers, dbBytes,
-                          serve: readServeFile(home),
+                          serve: readServeFile(home), lastShare,
+
+                          lan: lanIps(),
+                          logs: {
+                            sync: join(home, 'logs', 'mem-sync.log'),
+                            share: join(home, 'logs', 'mem-share.log'),
+                          },
                           paths: { home, db: dbPath, file: configFilePath(home) } })
           } catch (e) { return json({ ok: false, error: String(e) }) }
         }
@@ -2422,7 +2526,13 @@ export function apply(ctx, config = {}) {
           if (real !== root && !real.startsWith(root + sep)) {
             return json({ ok: false, error: '路径不在 ' + root + ' 下' })
           }
-          if (!existsSync(real)) return json({ ok: false, error: '不存在：' + real })
+          if (!existsSync(real)) {
+
+            const touchable = [join(home, 'logs', 'mem-sync.log'), join(home, 'logs', 'mem-share.log')]
+            if (!touchable.includes(real)) return json({ ok: false, error: '不存在：' + real })
+            mkdirSync(dirname(real), { recursive: true })
+            writeFileSync(real, '', 'utf8')
+          }
           try {
             if (url.pathname === '/memory-xfy/reveal') {
               openPath(real, true)
@@ -2891,6 +3001,42 @@ export function apply(ctx, config = {}) {
         },
       })
 
+      const offServePort = webServer.register({
+        kind: 'exact',
+        path: '/memory-xfy/serve-port',
+        handler: async (req, res) => {
+          const send = (obj, code = 200) => {
+            res.writeHead(code, {
+              'content-type': 'application/json; charset=utf-8',
+              'cache-control': 'no-store',
+            })
+            res.end(JSON.stringify(obj))
+          }
+          if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
+          try {
+            const chunks = []
+            for await (const c of req) chunks.push(c)
+            const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+            const port = Number(body.port)
+            if (!Number.isInteger(port) || port < 1 || port > 65535) {
+              return send({ ok: false, error: '端口要是 1~65535 的整数' }, 400)
+            }
+            const f = join(home, 'mem-serve.json')
+            if (!existsSync(f)) return send({ ok: false, error: '没有 mem-serve.json' }, 400)
+            const raw = JSON.parse(readFileSync(f, 'utf8'))
+            const before = raw.port || 8765
+            raw.port = port
+            const tmp = f + '.tmp'
+            writeFileSync(tmp, JSON.stringify(raw, null, 2) + '\n', 'utf8')
+            renameSync(tmp, f)
+            const rs = await restartMemServe(home)
+            return send({ ok: true, before, port, restart: rs,
+              note: rs.restarted ? 'mem-serve 已重启，新端口立刻生效' : rs.note })
+          } catch (e) { return send({ ok: false, error: String(e) }) }
+        },
+      })
+
       const offRemote = webServer.register({
         kind: 'exact',
         path: '/memory-xfy/remote',
@@ -3255,7 +3401,7 @@ export function apply(ctx, config = {}) {
       })
 
       return () => { offResource(); offCfg(); offLayout(); offCfgImport(); offTokNew(); offTokDel()
-        ; offRemote(); offSave(); offMeta(); offPromote(); offZone(); offSnip() }
+        ; offServePort(); offRemote(); offSave(); offMeta(); offPromote(); offZone(); offSnip() }
     })
   }
 
