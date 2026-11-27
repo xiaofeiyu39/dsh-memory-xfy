@@ -6,6 +6,51 @@ import { homedir } from 'node:os'
 import { createHash, createHmac, timingSafeEqual, randomBytes } from 'node:crypto'
 import { privateDecrypt, privateEncrypt } from './private.mjs'
 
+const IS_MAC = process.platform === 'darwin'
+
+function linuxDisplay() {
+  if (process.env.DISPLAY) return process.env.DISPLAY
+  try {
+    const socks = readdirSync('/tmp/.X11-unix').filter((f) => /^X\d+$/.test(f))
+    if (socks.length) return ':' + socks[0].slice(1)
+  } catch {}
+  return ''
+}
+function linuxDisplays() {
+  if (process.env.DISPLAY) return [process.env.DISPLAY]
+  try {
+    return readdirSync('/tmp/.X11-unix').filter((f) => /^X\d+$/.test(f)).map((f) => ':' + f.slice(1))
+  } catch { return [] }
+}
+function linuxEnv(display) {
+  const env = { ...process.env }
+  if (display) env.DISPLAY = display
+  return env
+}
+function openPath(real, reveal) {
+  if (IS_MAC) {
+    execFileSync('/usr/bin/open', reveal ? ['-R', real] : [real])
+    return
+  }
+
+  const target = reveal ? dirname(real) : real
+
+  const list = linuxDisplays().filter((d) => d !== ':0')
+  const d = list[0] || ''
+  execFileSync('setsid', ['-f', 'xdg-open', target],
+    { stdio: 'ignore', env: linuxEnv(d), timeout: 5000 })
+}
+function copyText(text) {
+  if (IS_MAC) { execFileSync('/usr/bin/pbcopy', [], { input: text }); return }
+
+  for (const d of (linuxDisplays().length ? linuxDisplays() : [''])) {
+    for (const [cmd, args] of [['xclip', ['-selection', 'clipboard']], ['xsel', ['--clipboard', '--input']], ['wl-copy', []]]) {
+      try { execFileSync(cmd, args, { input: text, env: linuxEnv(d), timeout: 5000 }); return } catch {}
+    }
+  }
+  throw new Error('没有 xclip / xsel / wl-copy，复制不了（请手动选中）')
+}
+
 export const name = 'memory-xfy'
 export const inject = ['tools', 'webServer', 'systemPrompt']
 
@@ -2380,11 +2425,11 @@ export function apply(ctx, config = {}) {
           if (!existsSync(real)) return json({ ok: false, error: '不存在：' + real })
           try {
             if (url.pathname === '/memory-xfy/reveal') {
-              execFileSync('/usr/bin/open', ['-R', real])
+              openPath(real, true)
             } else if (url.pathname === '/memory-xfy/open') {
-              execFileSync('/usr/bin/open', [real])
+              openPath(real, false)
             } else {
-              execFileSync('/usr/bin/pbcopy', [], { input: real })
+              copyText(real)
             }
             return json({ ok: true, path: real })
           } catch (e) { return json({ ok: false, error: String(e) }) }
@@ -2407,7 +2452,8 @@ export function apply(ctx, config = {}) {
               return json({ ok: false, error: '生成 HTML 失败：' + String(e).slice(0, 120) })
             }
             if (!html || !existsSync(html)) return json({ ok: false, error: '生成 HTML 失败' })
-            execFileSync('/usr/bin/open', ['-a', 'Google Chrome', html])
+            if (IS_MAC) execFileSync('/usr/bin/open', ['-a', 'Google Chrome', html])
+            else execFileSync('xdg-open', [html], { stdio: 'ignore' })
             return json({ ok: true, path: html })
           } catch (e) { return json({ ok: false, error: String(e) }) }
         }
