@@ -2441,7 +2441,7 @@ export function apply(ctx, config = {}) {
           try {
 
             const list = db.prepare(
-              "SELECT value AS tag, n FROM facets WHERE kind='tag' ORDER BY n DESC, tag").all()
+              "SELECT value AS tag, SUM(n) AS n FROM facets WHERE kind='tag' GROUP BY value ORDER BY n DESC, tag").all()
             return json({ ok: true, tags: list })
           } catch (e) { return json({ ok: false, error: String(e), tags: [] }) }
         }

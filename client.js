@@ -464,6 +464,14 @@ window.__ModuleLoader__.load({
       const [tagOptions, setTagOptions] = React.useState([])
 
       const [allTags, setAllTags] = React.useState([])
+
+      const loadAllTags = React.useCallback(() => {
+        const z = fZone.length === 0 ? 'none' : fZone.length === 1 ? fZone[0] : 'both'
+        fetch('/memory-xfy/facets?zone=' + encodeURIComponent(z))
+          .then((r) => r.json())
+          .then((d) => { if (d.ok) setAllTags(d.tags || []) })
+          .catch(() => {  })
+      }, [fZone])
       React.useEffect(() => {
         fetch('/memory-xfy/tags')
           .then((r) => r.json())
@@ -2231,7 +2239,12 @@ window.__ModuleLoader__.load({
                 flex: '1 1 70px', minWidth: 60, border: 'none', outline: 'none', background: 'transparent',
                 color: 'inherit', fontSize: 11.5, padding: '2px 2px',
               },
-              onChange: (e) => { setTagInput(e.target.value); setTagOpen(true) },
+              onChange: (e) => {
+                const v = e.target.value
+                if (v.startsWith('/') && !tagInput.startsWith('/')) loadAllTags()
+                setTagInput(v)
+                setTagOpen(true)
+              },
 
               onFocus: () => { setTagOpen(true); loadFacets() },
               onBlur: () => setTimeout(() => setTagOpen(false), 160),
