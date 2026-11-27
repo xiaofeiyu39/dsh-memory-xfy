@@ -2206,7 +2206,7 @@ export function apply(ctx, config = {}) {
             let files = 0
             if (anyCond) {
 
-              const lim = Math.max(1, Number(g('n')) || 20)
+              const lim = 1000000
               const hits = search(db, g('q'), lim, g('layer'), {
                 must: g('must'), not: g('not'), path: g('path'), category: g('category'),
                 tags: g('tag'), zone: g('zone'), all: g('all') === '1',

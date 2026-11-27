@@ -469,7 +469,6 @@ window.__ModuleLoader__.load({
         qClean = parts.filter((p3) => !(p3.startsWith('+') && p3.length > 1)).join(' ')
         if (qClean) p2.set('q', qClean)
         if (inlineMust.length) p2.set('must', inlineMust.join(' '))
-        p2.set('n', String(searchLimit))
         if (fLayers.length) p2.set('layer', fLayers.join(','))
         if (fCats.length) p2.set('category', fCats.join(','))
         if (fTags.length) p2.set('tag', fTags.join(','))
