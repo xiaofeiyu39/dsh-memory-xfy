@@ -1427,14 +1427,25 @@ function search(db, query, limit, layer, opts) {
   const after = normTime(o.after)
   const before = normTime(o.before, true)
   const wantTime = !!(cAfter || cBefore || mAfter || mBefore || after || before)
-  const tagList = sp(o.tags || o.tag)
-  const secTags = tagList.length ? tagMapOf(db) : null
-  const fileKws = tagList.length ? kwMapOf(db) : null
-  const passTag = (p, line) => {
-    if (!tagList.length) return true
+
+  const tagAnd = sp(o.tags || o.tag)
+  const tagOr = sp(o.tagOr || o['tag-or'])
+  const tagNot = sp(o.tagNot || o['tag-not'])
+  const anyTag = tagAnd.length || tagOr.length || tagNot.length
+  const secTags = anyTag ? tagMapOf(db) : null
+  const fileKws = anyTag ? kwMapOf(db) : null
+  const hasTag = (p, t) => {
     const have = secTags.byPath.get(String(p)) || EMPTY_SET
+    if (have.has(t)) return true
     const fk = fileKws.get(String(p)) || EMPTY_SET
-    return tagList.every((t) => have.has(t) || fk.has(t))
+    return fk.has(t)
+  }
+  const passTag = (p, line) => {
+    if (!anyTag) return true
+    for (const t of tagAnd) if (!hasTag(p, t)) return false
+    if (tagOr.length && !tagOr.some((t) => hasTag(p, t))) return false
+    for (const t of tagNot) if (hasTag(p, t)) return false
+    return true
   }
   const _num = (v) => {
     if (v === null || v === undefined || String(v).trim() === '') return null
@@ -2207,24 +2218,40 @@ export function apply(ctx, config = {}) {
             if (anyCond) {
 
               const lim = 1000000
-              const hits = search(db, g('q'), lim, g('layer'), {
-                must: g('must'), not: g('not'), path: g('path'), category: g('category'),
-                tags: g('tag'), zone: g('zone'), all: g('all') === '1',
-                minimp: g('minimp'), maximp: g('maximp'), since: g('since'),
-              })
+
+              const hasCat = !!g('category')
+              const hasTag = !!g('tag')
+              const condSet = (drop) => {
+                const set = new Set()
+                for (const h of search(db, g('q'), lim, g('layer'), {
+                  must: g('must'), not: g('not'), path: g('path'),
+                  category: drop === 'category' ? '' : g('category'),
+                  tags: drop === 'tag' ? '' : g('tag'),
+                  tagOr: drop === 'tag' ? '' : (g('tagor') || g('tag-or')),
+                  tagNot: drop === 'tag' ? '' : (g('tagnot') || g('tag-not')),
+                  zone: g('zone'), all: g('all') === '1',
+                  minimp: g('minimp'), maximp: g('maximp'), since: g('since'),
+                })) {
+                  const fp = h.full || h.path
+                  if (fp) set.add(fp)
+                }
+                return set
+              }
               const cm = catMapOf(db).byPath
               const tm = tagMapOf(db).byPath
-              const seen = new Set()
-              for (const h of hits) {
-                const fp = h.full || h.path
-                if (!fp || seen.has(fp)) continue
-                seen.add(fp)
-                const z = isArchived(fp) ? 'cold' : 'hot'
+
+              const catSet = condSet('category')
+              const tagSet = (hasCat || hasTag) ? condSet('tag') : catSet
+              for (const fp of catSet) {
                 const c = cm.get(fp)
-                if (c) bump(catAgg, c, z)
+                if (c) bump(catAgg, c, isArchived(fp) ? 'cold' : 'hot')
+              }
+              for (const fp of tagSet) {
+                const z = isArchived(fp) ? 'cold' : 'hot'
                 for (const t of tm.get(fp) || []) bump(tagAgg, t, z)
               }
-              files = seen.size
+
+              files = (hasCat && hasTag) ? condSet(null).size : (hasCat ? tagSet.size : catSet.size)
             } else {
               for (const r of db.prepare('SELECT kind, zone, value, n FROM facets').all()) {
                 const m = r.kind === 'category' ? catAgg : tagAgg
@@ -2412,7 +2439,7 @@ export function apply(ctx, config = {}) {
             }
             const g = (k) => url.searchParams.get(k) || ''
             const dbg = url.searchParams.get('debug') === '1'
-            const all = search(db, q, 10 ** 6, g('layer'), { must: g('must'), not: g('not'), path: g('path'), category: g('category'), since: g('since'), after: g('after'), before: g('before'), createdAfter: g('createdAfter') || g('created-after'), createdBefore: g('createdBefore') || g('created-before'), modifiedAfter: g('modifiedAfter') || g('modified-after'), modifiedBefore: g('modifiedBefore') || g('modified-before'), tags: g('tags') || g('tag'), minimp: g('minimp') || g('min-importance'), maximp: g('maximp'), all: g('all'), zone: g('zone'), why: g('why') })
+            const all = search(db, q, 10 ** 6, g('layer'), { must: g('must'), not: g('not'), path: g('path'), category: g('category'), since: g('since'), after: g('after'), before: g('before'), createdAfter: g('createdAfter') || g('created-after'), createdBefore: g('createdBefore') || g('created-before'), modifiedAfter: g('modifiedAfter') || g('modified-after'), modifiedBefore: g('modifiedBefore') || g('modified-before'), tags: g('tags') || g('tag'), tagOr: g('tagor') || g('tag-or'), tagNot: g('tagnot') || g('tag-not'), minimp: g('minimp') || g('min-importance'), maximp: g('maximp'), all: g('all'), zone: g('zone'), why: g('why') })
             if (dbg) {
               const probe = ALL_TABLES.flatMap((t) => db.prepare(`SELECT layer FROM ${t}`).all())
               const vals = [...new Set(probe.map((r) => r.layer))]

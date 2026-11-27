@@ -75,7 +75,7 @@ window.__ModuleLoader__.load({
     }
     const MS_PANEL = {
       position: 'absolute', top: '100%', left: 0, marginTop: 3, zIndex: 60,
-      minWidth: 150, maxHeight: 230, overflow: 'auto', borderRadius: 6, padding: '3px 0',
+      minWidth: 150, maxHeight: 300, overflow: 'auto', borderRadius: 6, padding: '3px 0',
       border: '1px solid ' + LINE, background: 'Canvas', color: 'CanvasText',
       boxShadow: '0 8px 24px rgba(0,0,0,.18)',
     }
@@ -441,10 +441,31 @@ window.__ModuleLoader__.load({
       const [fMinImp, setFMinImp] = React.useState('')
       const [fMaxImp, setFMaxImp] = React.useState('')
       const [filtersOpen, setFiltersOpen] = React.useState(false)
+
       const [fTags, setFTags] = React.useState([])
       const [tagInput, setTagInput] = React.useState('')
       const [tagOpen, setTagOpen] = React.useState(false)
       const [tagOptions, setTagOptions] = React.useState([])
+
+      const TAG_SYM = { and: '+', or: '|', not: '-' }
+      const TAG_WORD = { and: '与', or: '或', not: '非' }
+      const nextOp = (op) => (op === 'and' ? 'or' : op === 'or' ? 'not' : 'and')
+
+      const parseTag = (raw) => {
+        const str = String(raw || '').trim()
+        if (!str) return null
+        const m = /^\/(or|not|and)\s+(.+)$/i.exec(str)
+        if (m) {
+          const t2 = m[2].trim()
+          return t2 ? { t: t2, op: m[1].toLowerCase() } : null
+        }
+        const c0 = str[0]
+        if (c0 === '+' || c0 === '|' || c0 === '-') {
+          const t2 = str.slice(1).trim()
+          if (t2) return { t: t2, op: c0 === '+' ? 'and' : c0 === '|' ? 'or' : 'not' }
+        }
+        return { t: str, op: 'and' }
+      }
       React.useEffect(() => {
         fetch('/memory-xfy/tags')
           .then((r) => r.json())
@@ -471,7 +492,13 @@ window.__ModuleLoader__.load({
         if (inlineMust.length) p2.set('must', inlineMust.join(' '))
         if (fLayers.length) p2.set('layer', fLayers.join(','))
         if (fCats.length) p2.set('category', fCats.join(','))
-        if (fTags.length) p2.set('tag', fTags.join(','))
+        if (fTags.length) {
+          const g3 = (op) => fTags.filter((x) => x.op === op).map((x) => x.t)
+          const a3 = g3('and'); const o3 = g3('or'); const n3 = g3('not')
+          if (a3.length) p2.set('tag', a3.join(','))
+          if (o3.length) p2.set('tagor', o3.join(','))
+          if (n3.length) p2.set('tagnot', n3.join(','))
+        }
         if (fMinImp) p2.set('minimp', fMinImp)
         if (fMaxImp) p2.set('maximp', fMaxImp)
         p2.set('zone', fZone.length === 0 ? 'none' : fZone.length === 1 ? fZone[0] : 'both')
@@ -1231,7 +1258,13 @@ window.__ModuleLoader__.load({
           if (fCBefore.trim()) qs.set('createdBefore', fCBefore.trim())
           if (fMAfter.trim()) qs.set('modifiedAfter', fMAfter.trim())
           if (fMBefore.trim()) qs.set('modifiedBefore', fMBefore.trim())
-          if (fTags.length) qs.set('tags', fTags.join(','))
+          if (fTags.length) {
+            const g3 = (op) => fTags.filter((x) => x.op === op).map((x) => x.t)
+            const a3 = g3('and'); const o3 = g3('or'); const n3 = g3('not')
+            if (a3.length) qs.set('tags', a3.join(','))
+            if (o3.length) qs.set('tagor', o3.join(','))
+            if (n3.length) qs.set('tagnot', n3.join(','))
+          }
           if (fMinImp) qs.set('minimp', fMinImp)
           if (fMaxImp) qs.set('maximp', fMaxImp)
           const mustAll = inlineMust.join(' ')
@@ -1714,7 +1747,7 @@ window.__ModuleLoader__.load({
       if (fZone.length === 1) fBits.push(fZone[0] === 'hot' ? T('只看热区') : T('只看冷区'))
       if (fLayers.length) fBits.push(T('层 ') + fLayers.join('/'))
       if (fCats.length) fBits.push(T('分类 ') + fCats.join('/'))
-      if (fTags.length) fBits.push('tag:' + fTags.join('/'))
+      if (fTags.length) fBits.push('tag:' + fTags.map((x) => TAG_SYM[x.op] + x.t).join(' '))
       if (fMinImp || fMaxImp) fBits.push(T('重要 ') + (fMinImp || '0') + '~' + (fMaxImp || '100'))
       if (fCAfter || fCBefore) fBits.push(T('创建有时间'))
       if (fMAfter || fMBefore) fBits.push(T('修改有时间'))
@@ -2141,21 +2174,48 @@ window.__ModuleLoader__.load({
               border: '1px solid ' + LINE,
             },
           },
-            fTags.map((t) => h('span', {
-              key: t,
-              style: {
-                display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0 2px 0 5px',
-                borderRadius: 4, fontSize: 11, whiteSpace: 'nowrap',
-                background: 'rgba(99,102,241,.22)', border: '1px solid rgba(99,102,241,.5)',
-              },
-            }, t, h('span', {
-              style: { cursor: 'pointer', opacity: 0.75, fontWeight: 700, padding: '0 2px' },
-              title: T('移除'),
-              onClick: () => setFTags(fTags.filter((x) => x !== t)),
-            }, '×'))),
+
+            (() => {
+              const rank = { and: 0, or: 1, not: 2 }
+              const ordered = fTags.slice().sort((a2, b2) => rank[a2.op] - rank[b2.op])
+              const out = []
+              let prevOp = null
+              ordered.forEach((x, i) => {
+                if (i > 0 && prevOp && prevOp !== x.op) {
+                  out.push(h('span', { key: 'sep-' + x.op, style: { opacity: 0.3, padding: '0 1px' } }, '│'))
+                }
+                prevOp = x.op
+
+                const showSym = !(i === 0 && x.op === 'and')
+                out.push(h('span', {
+                  key: x.t,
+                  style: {
+                    display: 'inline-flex', alignItems: 'center', gap: 2, padding: '0 2px 0 3px',
+                    borderRadius: 4, fontSize: 11, whiteSpace: 'nowrap',
+
+                    background: x.op === 'not' ? 'rgba(239,68,68,.20)'
+                      : x.op === 'or' ? 'rgba(245,158,11,.20)' : 'rgba(99,102,241,.22)',
+                    border: '1px solid ' + (x.op === 'not' ? 'rgba(239,68,68,.5)'
+                      : x.op === 'or' ? 'rgba(245,158,11,.55)' : 'rgba(99,102,241,.5)'),
+                  },
+                },
+                  showSym ? h('span', {
+                    style: { cursor: 'pointer', fontWeight: 700, padding: '0 2px 0 1px' },
+                    title: T(TAG_WORD[x.op]) + T(' · 点一下切换：+ 与（都要有）→ | 或（有其一）→ - 非（排除）'),
+                    onClick: () => setFTags(fTags.map((y) => (y.t === x.t ? { t: y.t, op: nextOp(y.op) } : y))),
+                  }, TAG_SYM[x.op]) : null,
+                  x.t,
+                  h('span', {
+                    style: { cursor: 'pointer', opacity: 0.75, fontWeight: 700, padding: '0 2px' },
+                    title: T('移除'),
+                    onClick: () => setFTags(fTags.filter((y) => y.t !== x.t)),
+                  }, '×')))
+              })
+              return out
+            })(),
             h('input', {
               value: tagInput,
-              placeholder: fTags.length ? '' : T('tag 筛选…（可多选）'),
+              placeholder: fTags.length ? '' : T('tag 筛选…（+ 与 · | 或 · - 非）'),
               style: {
                 flex: '1 1 70px', minWidth: 60, border: 'none', outline: 'none', background: 'transparent',
                 color: 'inherit', fontSize: 11.5, padding: '2px 2px',
@@ -2167,10 +2227,11 @@ window.__ModuleLoader__.load({
               onKeyDown: (e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
-                  const t = tagInput.trim()
-                  if (t && !fTags.includes(t)) setFTags([...fTags, t])
+                  const raw = tagInput.trim()
+                  const parsed = parseTag(raw)
+                  if (parsed) setFTags([...fTags.filter((y) => y.t !== parsed.t), parsed])
                   setTagInput(''); setTagOpen(false)
-                  if (!t) doSearch()
+                  if (!raw) doSearch()
                 } else if (e.key === 'Backspace' && !tagInput && fTags.length) {
                   setFTags(fTags.slice(0, -1))
                 } else if (e.key === 'Escape') {
@@ -2179,7 +2240,7 @@ window.__ModuleLoader__.load({
               },
             }),
             tagOpen ? (() => {
-              const all = tagOptions.filter((o) => !fTags.includes(o.tag) && (!tagInput || o.tag.includes(tagInput)))
+              const all = tagOptions.filter((o) => !fTags.some((y) => y.t === o.tag) && (!tagInput || o.tag.includes(tagInput)))
               if (!all.length) return null
 
               const CAP = 200
@@ -2199,7 +2260,11 @@ window.__ModuleLoader__.load({
                   fontSize: 11.5, cursor: 'pointer',
                 },
                 onMouseDown: (e) => e.preventDefault(),
-                onClick: () => { setFTags([...fTags, o.tag]); setTagInput(''); setTagOpen(false) },
+                onClick: () => {
+
+                  setFTags([...fTags.filter((y) => y.t !== o.tag), { t: o.tag, op: 'and' }])
+                  setTagInput(''); setTagOpen(false)
+                },
               },
                 h('span', null, o.tag),
                 h('span', {
