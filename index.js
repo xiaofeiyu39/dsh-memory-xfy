@@ -1237,8 +1237,6 @@ function groupOf(layer, file, text) {
     const dir = basename(dirname(file))
     if (dir === 'changelog' || dir === 'outbound') return dir
 
-    if (file.includes('/logs/skills/')) return 'skills'
-
     return dir || 'logs'
   }
   if (layer === 'dailies') {
@@ -1266,7 +1264,6 @@ function groupDirOf(layer, file) {
   }
   if (layer === 'logs') {
 
-    if (file.includes('/logs/skills/')) return dirname(dirname(file))
     return dirname(file)
   }
   if (layer === 'profiles') return dirname(file)
@@ -2641,11 +2638,12 @@ export function apply(ctx, config = {}) {
                 for (const d of (L.dirs || [])) rels.add(String(d).trim())
               }
               rels.add(relative(root, coldRoot))
+
               for (const f of ['mem.db', 'mem.db-wal', 'mem.db-shm',
                 'mem-signals.json', 'sync-state.json']) rels.add(f)
               try {
-                for (const n of readdirSync(join(root, 'cache'))) {
-                  if (n.startsWith('mem-access.jsonl')) rels.add('cache/' + n)
+                for (const n of readdirSync(root)) {
+                  if (n.startsWith('mem-access.jsonl')) rels.add(n)
                 }
               } catch {  }
               const moved = []
