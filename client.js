@@ -97,7 +97,8 @@ window.__ModuleLoader__.load({
     ]
 
     function appendTag(seq, tag, sym) {
-      const kept = (seq || []).filter((y) => y.tag !== tag)
+
+      const kept = seq || []
       const last = kept[kept.length - 1]
       const hasLone = last && !last.tag && last.sym !== '(' && last.sym !== ')'
 
@@ -2286,8 +2287,7 @@ window.__ModuleLoader__.load({
               const qText = slash ? tagInput.slice(1) : tagInput
 
               const pool = slash ? allTags : tagOptions
-              const all = pool.filter((o) => !tagSeq.some((y) => y.tag === o.tag)
-                && (!qText || o.tag.includes(qText)))
+              const all = pool.filter((o) => (!qText || o.tag.includes(qText)))
 
               if (!slash && !all.length) return null
               const CAP = 200
