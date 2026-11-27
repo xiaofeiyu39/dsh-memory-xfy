@@ -1667,6 +1667,21 @@ window.__ModuleLoader__.load({
             key: 'meta', meta: sel.meta, human: sel.human, machine: sel.machine,
             onSave: saveMeta, busy, readOnly: readonlyHere,
           }) : null,
+
+          h('div', {
+            key: 'foldbar',
+            style: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: 9 },
+          },
+            h('div', {
+              title: headOpen ? T('收起上方标题 / tags / 简介') : T('展开上方标题 / tags / 简介'),
+              onClick: () => setHeadOpen(!headOpen),
+              style: {
+                width: 44, height: 9, borderRadius: 5, border: '1px solid ' + LINE,
+                background: 'Canvas', color: 'inherit', cursor: 'pointer', opacity: 0.6,
+                userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 8, lineHeight: '7px',
+              },
+            }, headOpen ? '▴' : '▾')),
           preview
             ? h('div', { key: 'pv', style: S.previewBox }, safeMd)
             : h('textarea', {
@@ -2534,20 +2549,6 @@ window.__ModuleLoader__.load({
             }, treeOpen ? '‹' : '›')),
           h('div', { style: S.editorBox }, editor),
 
-          h('div', {
-            key: 'foldstrip',
-            style: { flex: '0 0 9px', alignSelf: 'stretch', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-          },
-            h('div', {
-              title: headOpen ? T('收起上方标题 / tags / 简介') : T('展开上方标题 / tags / 简介'),
-              onClick: () => setHeadOpen(!headOpen),
-              style: {
-                width: 9, height: 44, lineHeight: '42px', textAlign: 'center',
-                fontSize: 11, borderRadius: 5, border: '1px solid ' + LINE,
-                background: 'Canvas', color: 'inherit', cursor: 'pointer',
-                opacity: 0.6, userSelect: 'none',
-              },
-            }, headOpen ? '▴' : '▾')),
         ),
       )
     }
