@@ -33,7 +33,7 @@ if _cold_raw.startswith("/") or ".." in pathlib.PurePosixPath(_cold_raw).parts:
     sys.exit(f"❌ layers.json 的 cold 要写相对主路径的细分路径（不是绝对路径、不能有 ..）：{_cold_raw}")
 COLD = ROOT / _cold_raw
 
-CACHE = ROOT / "cache"
+CACHE = ROOT
 
 DB = pathlib.Path(os.environ.get("MEMQ_DB") or (CACHE / "mem.db"))
 SIGNALS = CACHE / "mem-signals.json"
@@ -878,7 +878,7 @@ def query_rows(c, q, limit):
         _tag_hit = _tag_bridge(c, q)
     scored, seen = [], set()
     floor = 1 if len(qb) <= 1 else 2
-    _LAYER_MUL = {"daily": 0.78, "logs": 0.78, "reviews": 0.85}
+    _LAYER_MUL = {"dailies": 0.78, "logs": 0.78, "reviews": 0.85}
     for body, path, layer, line, weight, low, hit in cand:
         if len(hit) < floor:
             continue
@@ -900,7 +900,7 @@ def query_rows(c, q, limit):
             score *= _tmul
             why.append(f"tag桥×{_tmul:.2f}")
         _dm = re.search(r"(\d{4})-(\d{2})-(\d{2})", str(path))
-        if _dm and layer in ("daily", "logs", "reviews"):
+        if _dm and layer in ("dailies", "logs", "reviews"):
             try:
                 _d = (date.today() - date(int(_dm.group(1)), int(_dm.group(2)), int(_dm.group(3)))).days
                 _decay = max(0.85, 1 - _d * 0.02)

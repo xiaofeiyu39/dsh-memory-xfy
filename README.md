@@ -93,7 +93,7 @@ npx dsh-memory-init        # 或 node bin/init.js
 | 核心 | `rules`（AGENTS.md / LOOP.md） | 每轮都要守的规矩，密度最高 |
 | 精炼 | `docs` · `skills` | 结论 / 操作手册 |
 | 资产 | `bin` | 还能用的工具 |
-| 流水 | `daily` · `logs` · `reviews` | 发生过什么 |
+| 流水 | `dailies` · `logs` · `reviews` | 发生过什么 |
 
 判断标准一句话：**每轮都用 → 核心；动手才用 → 技能；查资料才用 → 文档；只有复盘才用 → 流水。**
 

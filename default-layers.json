@@ -26,6 +26,20 @@
       ]
     },
     {
+      "name": "profiles",
+      "weight": 4,
+      "dirs": [
+        "profiles/users",
+        "profiles/tgchats"
+      ],
+      "exts": [
+        ".md"
+      ],
+      "exclude_names": [
+        "README.md"
+      ]
+    },
+    {
       "name": "skills",
       "weight": 5,
       "dirs": [
@@ -53,20 +67,6 @@
       ]
     },
     {
-      "name": "profiles",
-      "weight": 4,
-      "dirs": [
-        "profiles/users",
-        "profiles/tgchats"
-      ],
-      "exts": [
-        ".md"
-      ],
-      "exclude_names": [
-        "README.md"
-      ]
-    },
-    {
       "name": "reviews",
       "weight": 2,
       "dirs": [
@@ -78,10 +78,10 @@
       "window": 7
     },
     {
-      "name": "daily",
+      "name": "dailies",
       "weight": 3,
       "dirs": [
-        "daily"
+        "dailies"
       ],
       "exts": [
         ".md"

@@ -95,7 +95,7 @@ Layer definitions live in `~/.dsh/layers.json` — **the single source of truth*
 | Core | `rules` (AGENTS.md / LOOP.md) | Rules you obey every turn — highest density |
 | Distilled | `docs` · `skills` | Conclusions / runbooks |
 | Assets | `bin` | Tools that still work |
-| Stream | `daily` · `logs` · `reviews` | What actually happened |
+| Stream | `dailies` · `logs` · `reviews` | What actually happened |
 
 One-line rule: **used every turn → core; used when doing → skill; used when looking up → doc; used only in retro → stream.**
 
@@ -103,7 +103,7 @@ One-line rule: **used every turn → core; used when doing → skill; used when 
 
 Two tables, `chunks` (hot) and `chunks_record` (cold). **Only the hot table is searched by default.**
 
-- Layers with a `window` (e.g. `daily` 3 days, `reviews` 7 days) keep recent files hot; the rest sink automatically
+- Layers with a `window` (e.g. `dailies` 3 days, `reviews` 7 days) keep recent files hot; the rest sink automatically
 - Files past the window are **physically moved into `archived/`** — **file location *is* the hot/cold state**
 - Cold entries stay searchable: tick **Cold memory** in the panel
 

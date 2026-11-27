@@ -103,7 +103,7 @@ function walkHashes(root, rel, out, limit) {
 }
 
 function syncStatePath() {
-  return join(homedir(), '.dsh', 'cache', 'sync-state.json')
+  return join(memRootCached(join(homedir(), '.dsh')), 'sync-state.json')
 }
 function loadSyncState() {
   try { return JSON.parse(readFileSync(syncStatePath(), 'utf8')) } catch { return {} }
@@ -335,6 +335,21 @@ function layerDirsOf(cfg, L, home) {
 }
 
 let _coldCache = { key: '', val: '' }
+
+const _rootCache = { key: '', val: '' }
+function memRootCached(home) {
+  const f = layersFile(home)
+  let st
+  try { st = statSync(f) } catch { return home }
+  const key = `${f}:${st.mtimeMs}:${st.size}`
+  if (_rootCache.key !== key) {
+    const cfg = JSON.parse(readFileSync(f, 'utf8'))
+    _rootCache.val = rootOf(cfg, home)
+    _rootCache.key = key
+  }
+  return _rootCache.val
+}
+
 function coldRootCached(home) {
   const f = layersFile(home)
   let st
@@ -826,7 +841,7 @@ function collapseByDoc(hits) {
 
 let _sigCache = null, _sigMtime = 0
 function importanceOf(path, line, opts) {
-  const file = join(homedir(), '.dsh', 'cache', 'mem-signals.json')
+  const file = join(memRootCached(join(homedir(), '.dsh')), 'mem-signals.json')
   try {
     const st = statSync(file)
     if (!_sigCache || st.mtimeMs !== _sigMtime) {
@@ -925,11 +940,11 @@ function scoreRows(rows, query, minWcov = 0.25, wantWhy = false) {
     const _imp = importanceOf(r.path, r.line, { forScore: true })
     const _wm = 1 + (r.weight - 3) * 0.06
     let score = rel * _wm * (0.75 + 0.5 * _imp / 100)
-    const LAYER_MUL = { daily: 0.78, log: 0.78, reviews: 0.85 }
+    const LAYER_MUL = { dailies: 0.78, logs: 0.78, reviews: 0.85 }
     const _layerMul = LAYER_MUL[r.layer] || 1
     score *= _layerMul
     let _decayVal = 1, _decayDays = 0
-    if (['daily', 'logs', 'reviews'].includes(r.layer)) {
+    if (['dailies', 'logs', 'reviews'].includes(r.layer)) {
       const dm = /(\d{4})-(\d{2})-(\d{2})/.exec(String(r.path))
       if (dm) {
         const then = new Date(+dm[1], +dm[2] - 1, +dm[3])
@@ -1167,7 +1182,7 @@ function joinEntries(file, entries) {
 
 function fileLabel(file, text, layer) {
   const base = basename(file)
-  if (layer === 'daily') {
+  if (layer === 'dailies') {
     const h2 = /^##\s+(.+)$/m.exec(text || '')
     if (h2) {
       const t = h2[1].replace(/\s+/g, ' ').trim()
@@ -1226,9 +1241,9 @@ function groupOf(layer, file, text) {
 
     return dir || 'logs'
   }
-  if (layer === 'daily') {
+  if (layer === 'dailies') {
     const dir = basename(dirname(file))
-    return dir === 'daily' ? basename(file).replace(/\.md$/i, '') : dir
+    return dir === 'dailies' ? basename(file).replace(/\.md$/i, '') : dir
   }
 
   if (layer === 'info') return ''
@@ -1243,9 +1258,9 @@ function groupOf(layer, file, text) {
 }
 
 function groupDirOf(layer, file) {
-  if (layer === 'daily') {
+  if (layer === 'dailies') {
     const dir = dirname(file)
-    if (basename(dir) !== 'daily') return dir
+    if (basename(dir) !== 'dailies') return dir
     const sub = join(dir, basename(file).replace(/\.md$/i, ''))
     return existsSync(sub) ? sub : dir
   }
@@ -1260,7 +1275,7 @@ function groupDirOf(layer, file) {
 }
 
 const LAYER_DIRS = {
-  docs: 'docs', skills: 'skills', daily: 'daily',
+  docs: 'docs', skills: 'skills', dailies: 'dailies',
   reviews: 'reviews', logs: 'logs', info: 'info',
   profiles: 'profiles',
 }
@@ -1332,7 +1347,7 @@ function normTime(v, upper = false) {
   return t
 }
 
-function hotWindowDefaults() { return { daily: 3, log: 3, reviews: 7 } }
+function hotWindowDefaults() { return { dailies: 3, logs: 3, reviews: 7 } }
 let _HW_CACHE = null, _HW_MTIME = -1
 function hotWindow() {
   const def = hotWindowDefaults()
@@ -1384,7 +1399,7 @@ function tblOf(layer, p) {
   return days <= keep ? 'chunks' : 'chunks_record'
 }
 
-const RECORD_LAYERS = new Set(['daily', 'logs'])
+const RECORD_LAYERS = new Set(['dailies', 'logs'])
 const ALL_TABLES = ['chunks', 'chunks_record']
 function tablesFor(lf, zone) {
   if (zone === 'none') return []
@@ -1593,7 +1608,7 @@ function logAccess(paths, src = 'panel') {
   try {
     if (!paths || !paths.length) return
     const uniq = [...new Set(paths.map(String))]
-    const dir = join(homedir(), '.dsh', 'cache')
+    const dir = memRootCached(join(homedir(), '.dsh'))
     mkdirSync(dir, { recursive: true })
     appendFileSync(join(dir, 'mem-access.jsonl'),
       JSON.stringify({ t: Date.now(), src, paths: uniq }) + '\n', 'utf8')
@@ -1764,7 +1779,7 @@ export function apply(ctx, config = {}) {
   syncLayersPtr(home)
 
   const rootCfg = JSON.parse(readFileSync(layersFile(home), 'utf8'))
-  const dbPath = config.dbPath || join(rootOf(rootCfg, home), 'cache', 'mem.db')
+  const dbPath = config.dbPath || join(rootOf(rootCfg, home), 'mem.db')
   const autoIndex = config.autoIndexOnSearch !== false
   const db = openDb(dbPath)
 
@@ -1787,7 +1802,7 @@ export function apply(ctx, config = {}) {
         not: { type: 'string', description: '排除含这些词的段（空格分隔）' },
         path: { type: 'string', description: '路径子串，如 docs/ 或 SKILL.md' },
         category: { type: 'string', description: '分类子串，如 技能 / DSH本体 / 社交（读 frontmatter 的 category）' },
-        since: { type: 'string', description: '只要这个日期之后的，格式 YYYY-MM-DD（按文件名里的日期，对 daily/reviews/log 有效）' },
+        since: { type: 'string', description: '只要这个日期之后的，格式 YYYY-MM-DD（按文件名里的日期，对 dailies/reviews/log 有效）' },
         createdAfter: { type: 'string', description: '创建时间起（≥）。格式 HH:MM / HH:MM:SS / YYYY-MM-DD / YYYY-MM-DD HH:MM[:SS]' },
         createdBefore: { type: 'string', description: '创建时间止（≤）。格式同上' },
         modifiedAfter: { type: 'string', description: '修改时间起（≥）。没改过的段按创建时间算' },
@@ -2471,6 +2486,36 @@ export function apply(ctx, config = {}) {
 
       const offLayout = webServer.register({
         kind: 'exact',
+
+        path: '/memory-xfy/layers-order',
+        handler: async (req, res) => {
+          const send = (obj, code = 200) => {
+            res.writeHead(code, {
+              'content-type': 'application/json; charset=utf-8',
+              'cache-control': 'no-store',
+            })
+            res.end(JSON.stringify(obj))
+          }
+          if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
+          try {
+            const body = await readJsonBody(req)
+            const order = Array.isArray(body.order) ? body.order.map(String) : []
+            const cfgPath = layersFile(home)
+            const cfg = JSON.parse(readFileSync(cfgPath, 'utf8'))
+            const by = new Map((cfg.layers || []).map((L) => [L.name, L]))
+
+            if (order.length !== by.size || new Set(order).size !== order.length
+                || order.some((n) => !by.has(n))) {
+              return send({ ok: false, error: '层的集合对不上（不许借排序增删层）' })
+            }
+            cfg.layers = order.map((n) => by.get(n))
+            writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + '\n')
+            return send({ ok: true, order })
+          } catch (e) { return send({ ok: false, error: String(e) }) }
+        },
+      },
+      {
         path: '/memory-xfy/layout-save',
         handler: async (req, res) => {
           const send = (obj, code = 200) => {
@@ -2596,8 +2641,8 @@ export function apply(ctx, config = {}) {
                 for (const d of (L.dirs || [])) rels.add(String(d).trim())
               }
               rels.add(relative(root, coldRoot))
-              for (const f of ['cache/mem.db', 'cache/mem.db-wal', 'cache/mem.db-shm',
-                'cache/mem-signals.json', 'cache/sync-state.json']) rels.add(f)
+              for (const f of ['mem.db', 'mem.db-wal', 'mem.db-shm',
+                'mem-signals.json', 'sync-state.json']) rels.add(f)
               try {
                 for (const n of readdirSync(join(root, 'cache'))) {
                   if (n.startsWith('mem-access.jsonl')) rels.add('cache/' + n)
