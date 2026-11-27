@@ -1410,6 +1410,48 @@ function tablesFor(lf, zone) {
   return ['chunks']
 }
 
+function predsOf(raw) {
+  if (!raw) return []
+  let items = raw
+  if (typeof raw === 'string') {
+    try { items = JSON.parse(raw) } catch { return [] }
+  }
+  if (!Array.isArray(items)) return []
+  const out = []
+  let cur = null
+  let lastAdj = null
+  let depth = 0
+  for (const it of items) {
+    if (!Array.isArray(it)) continue
+    const sym = String(it[0] == null ? '' : it[0])
+    const tag = String(it[1] == null ? '' : it[1])
+    if (sym === '(') { depth += 1; cur = []; out.push({ op: 'or', tags: cur }); lastAdj = null; continue }
+    if (sym === ')') {
+      depth -= 1
+      if (depth < 0) return [{ op: 'never', tags: [] }]
+      cur = null; lastAdj = null; continue
+    }
+    if (!tag) continue
+    if (cur) {
+      if (sym === '-') out.push({ op: 'not', tags: [tag] })
+      else cur.push(tag)
+      continue
+    }
+    if (sym === '-') { out.push({ op: 'not', tags: [tag] }); lastAdj = null; continue }
+    if (sym === '|') {
+      if (lastAdj) lastAdj.tags.push(tag)
+      else { lastAdj = { op: 'or', tags: [tag] }; out.push(lastAdj) }
+      continue
+    }
+    out.push({ op: 'and', tags: [tag] })
+    lastAdj = null
+  }
+
+  if (depth !== 0) return [{ op: 'never', tags: [] }]
+  if (out.some((x) => x.op === 'or' && !x.tags.length)) return [{ op: 'never', tags: [] }]
+  return out.filter((x) => x.tags.length)
+}
+
 function search(db, query, limit, layer, opts) {
   const o = opts || {}
   const zone = o.zone || (o.all ? 'both' : undefined)
@@ -1431,7 +1473,9 @@ function search(db, query, limit, layer, opts) {
   const tagAnd = sp(o.tags || o.tag)
   const tagOr = sp(o.tagOr || o['tag-or'])
   const tagNot = sp(o.tagNot || o['tag-not'])
-  const anyTag = tagAnd.length || tagOr.length || tagNot.length
+
+  const tagPreds = predsOf(o.tagseq || o.tagSeq)
+  const anyTag = tagAnd.length || tagOr.length || tagNot.length || tagPreds.length
   const secTags = anyTag ? tagMapOf(db) : null
   const fileKws = anyTag ? kwMapOf(db) : null
   const hasTag = (p, t) => {
@@ -1445,6 +1489,12 @@ function search(db, query, limit, layer, opts) {
     for (const t of tagAnd) if (!hasTag(p, t)) return false
     if (tagOr.length && !tagOr.some((t) => hasTag(p, t))) return false
     for (const t of tagNot) if (hasTag(p, t)) return false
+    for (const pr of tagPreds) {
+      if (pr.op === 'and') { if (!pr.tags.every((t) => hasTag(p, t))) return false }
+      else if (pr.op === 'or') { if (!pr.tags.some((t) => hasTag(p, t))) return false }
+      else if (pr.op === 'not') { if (pr.tags.some((t) => hasTag(p, t))) return false }
+      else if (pr.op === 'never') return false
+    }
     return true
   }
   const _num = (v) => {
@@ -2229,6 +2279,7 @@ export function apply(ctx, config = {}) {
                   tags: drop === 'tag' ? '' : g('tag'),
                   tagOr: drop === 'tag' ? '' : (g('tagor') || g('tag-or')),
                   tagNot: drop === 'tag' ? '' : (g('tagnot') || g('tag-not')),
+                  tagseq: drop === 'tag' ? '' : g('tagseq'),
                   zone: g('zone'), all: g('all') === '1',
                   minimp: g('minimp'), maximp: g('maximp'), since: g('since'),
                 })) {
@@ -2439,7 +2490,7 @@ export function apply(ctx, config = {}) {
             }
             const g = (k) => url.searchParams.get(k) || ''
             const dbg = url.searchParams.get('debug') === '1'
-            const all = search(db, q, 10 ** 6, g('layer'), { must: g('must'), not: g('not'), path: g('path'), category: g('category'), since: g('since'), after: g('after'), before: g('before'), createdAfter: g('createdAfter') || g('created-after'), createdBefore: g('createdBefore') || g('created-before'), modifiedAfter: g('modifiedAfter') || g('modified-after'), modifiedBefore: g('modifiedBefore') || g('modified-before'), tags: g('tags') || g('tag'), tagOr: g('tagor') || g('tag-or'), tagNot: g('tagnot') || g('tag-not'), minimp: g('minimp') || g('min-importance'), maximp: g('maximp'), all: g('all'), zone: g('zone'), why: g('why') })
+            const all = search(db, q, 10 ** 6, g('layer'), { must: g('must'), not: g('not'), path: g('path'), category: g('category'), since: g('since'), after: g('after'), before: g('before'), createdAfter: g('createdAfter') || g('created-after'), createdBefore: g('createdBefore') || g('created-before'), modifiedAfter: g('modifiedAfter') || g('modified-after'), modifiedBefore: g('modifiedBefore') || g('modified-before'), tags: g('tags') || g('tag'), tagOr: g('tagor') || g('tag-or'), tagNot: g('tagnot') || g('tag-not'), tagseq: g('tagseq'), minimp: g('minimp') || g('min-importance'), maximp: g('maximp'), all: g('all'), zone: g('zone'), why: g('why') })
             if (dbg) {
               const probe = ALL_TABLES.flatMap((t) => db.prepare(`SELECT layer FROM ${t}`).all())
               const vals = [...new Set(probe.map((r) => r.layer))]

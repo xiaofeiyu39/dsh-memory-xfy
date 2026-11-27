@@ -96,6 +96,22 @@ window.__ModuleLoader__.load({
       { key: 'del', ch: '删', label: '删（能删除）' },
     ]
 
+    function seqPairs(seq) {
+      const out = []
+      let pending = ''
+      for (const x of seq || []) {
+        if (!x) continue
+        if (x.k === 'sym') {
+          if (x.v === '(' || x.v === ')') { out.push([x.v, '']); pending = '' }
+          else pending = x.v
+        } else if (x.k === 'tag' && x.v) {
+          out.push([pending || '+', x.v])
+          pending = ''
+        }
+      }
+      return out
+    }
+
     function MultiSelect({ allLabel, options, value, onChange, onOpen }) {
       const [open, setOpen] = React.useState(false)
       const box = React.useRef(null)
@@ -442,30 +458,12 @@ window.__ModuleLoader__.load({
       const [fMaxImp, setFMaxImp] = React.useState('')
       const [filtersOpen, setFiltersOpen] = React.useState(false)
 
-      const [fTags, setFTags] = React.useState([])
+      const [tagSeq, setTagSeq] = React.useState([])
+      const [tagCursor, setTagCursor] = React.useState(-1)
+      const [pendingSym, setPendingSym] = React.useState('+')
       const [tagInput, setTagInput] = React.useState('')
       const [tagOpen, setTagOpen] = React.useState(false)
       const [tagOptions, setTagOptions] = React.useState([])
-
-      const TAG_SYM = { and: '+', or: '|', not: '-' }
-      const TAG_WORD = { and: '与', or: '或', not: '非' }
-      const nextOp = (op) => (op === 'and' ? 'or' : op === 'or' ? 'not' : 'and')
-
-      const parseTag = (raw) => {
-        const str = String(raw || '').trim()
-        if (!str) return null
-        const m = /^\/(or|not|and)\s+(.+)$/i.exec(str)
-        if (m) {
-          const t2 = m[2].trim()
-          return t2 ? { t: t2, op: m[1].toLowerCase() } : null
-        }
-        const c0 = str[0]
-        if (c0 === '+' || c0 === '|' || c0 === '-') {
-          const t2 = str.slice(1).trim()
-          if (t2) return { t: t2, op: c0 === '+' ? 'and' : c0 === '|' ? 'or' : 'not' }
-        }
-        return { t: str, op: 'and' }
-      }
       React.useEffect(() => {
         fetch('/memory-xfy/tags')
           .then((r) => r.json())
@@ -492,13 +490,7 @@ window.__ModuleLoader__.load({
         if (inlineMust.length) p2.set('must', inlineMust.join(' '))
         if (fLayers.length) p2.set('layer', fLayers.join(','))
         if (fCats.length) p2.set('category', fCats.join(','))
-        if (fTags.length) {
-          const g3 = (op) => fTags.filter((x) => x.op === op).map((x) => x.t)
-          const a3 = g3('and'); const o3 = g3('or'); const n3 = g3('not')
-          if (a3.length) p2.set('tag', a3.join(','))
-          if (o3.length) p2.set('tagor', o3.join(','))
-          if (n3.length) p2.set('tagnot', n3.join(','))
-        }
+        if (tagSeq.length) p2.set('tagseq', JSON.stringify(seqPairs(tagSeq)))
         if (fMinImp) p2.set('minimp', fMinImp)
         if (fMaxImp) p2.set('maximp', fMaxImp)
         p2.set('zone', fZone.length === 0 ? 'none' : fZone.length === 1 ? fZone[0] : 'both')
@@ -509,7 +501,7 @@ window.__ModuleLoader__.load({
             setTagOptions(d.tags || [])
           })
           .catch(() => {  })
-      }, [q, fLayers, fCats, fTags, fMinImp, fMaxImp, fZone])
+      }, [q, fLayers, fCats, tagSeq, fMinImp, fMaxImp, fZone])
       const [busy, setBusy] = React.useState(false)
 
       const [cfgOpen, setCfgOpen] = React.useState(false)
@@ -1229,9 +1221,24 @@ window.__ModuleLoader__.load({
         setNotice(T('写下新条目，再点「保存」'))
       }
 
+      const tagBad = React.useMemo(() => {
+        const st = []
+        for (const x of tagSeq) {
+          if (x.k !== 'sym') { if (st.length) st[st.length - 1] += 1; continue }
+          if (x.v === '(') st.push(0)
+          else if (x.v === ')') {
+            if (!st.length || st[st.length - 1] === 0) return T('tag 条件不合法')
+            st.pop()
+            if (st.length) st[st.length - 1] += 1
+          }
+        }
+        return st.length ? T('tag 条件不合法') : ''
+      }, [tagSeq])
+
       const doSearch = async (n) => {
-        const anyFilter = fLayers.length || fCats.length || fTags.length
+        const anyFilter = fLayers.length || fCats.length || tagSeq.length
           || fMinImp || fMaxImp || fCAfter || fCBefore || fMAfter || fMBefore
+        if (tagBad) { setNotice(tagBad + T('，先改一下再检索')); return }
         if (!q.trim() && !anyFilter) { setNotice(T('搜索词和筛选条件都是空的')); return }
         setBusy(true)
         setHitsCollapsed(false)
@@ -1258,13 +1265,7 @@ window.__ModuleLoader__.load({
           if (fCBefore.trim()) qs.set('createdBefore', fCBefore.trim())
           if (fMAfter.trim()) qs.set('modifiedAfter', fMAfter.trim())
           if (fMBefore.trim()) qs.set('modifiedBefore', fMBefore.trim())
-          if (fTags.length) {
-            const g3 = (op) => fTags.filter((x) => x.op === op).map((x) => x.t)
-            const a3 = g3('and'); const o3 = g3('or'); const n3 = g3('not')
-            if (a3.length) qs.set('tags', a3.join(','))
-            if (o3.length) qs.set('tagor', o3.join(','))
-            if (n3.length) qs.set('tagnot', n3.join(','))
-          }
+          if (tagSeq.length) qs.set('tagseq', JSON.stringify(seqPairs(tagSeq)))
           if (fMinImp) qs.set('minimp', fMinImp)
           if (fMaxImp) qs.set('maximp', fMaxImp)
           const mustAll = inlineMust.join(' ')
@@ -1377,7 +1378,7 @@ window.__ModuleLoader__.load({
         setQ(''); setHits(null); setTotal(0); setColdHits(0); setHitsCollapsed(false)
         setFZone(['hot'])
         setFLayers(DEFAULT_LAYERS)
-        setFCats([]); setFTags([])
+        setFCats([]); setTagSeq([])
         setFMinImp(''); setFMaxImp('')
         setFCAfter(''); setFCBefore(''); setFMAfter(''); setFMBefore('')
         loadStats(); loadTree(); loadFacets()
@@ -1740,14 +1741,14 @@ window.__ModuleLoader__.load({
         ]
       }
 
-      const nF = fLayers.length + fCats.length + fTags.length
+      const nF = fLayers.length + fCats.length + tagSeq.length
         + (fMinImp ? 1 : 0) + (fMaxImp ? 1 : 0)
         + (fCAfter ? 1 : 0) + (fCBefore ? 1 : 0) + (fMAfter ? 1 : 0) + (fMBefore ? 1 : 0)
       const fBits = []
       if (fZone.length === 1) fBits.push(fZone[0] === 'hot' ? T('只看热区') : T('只看冷区'))
       if (fLayers.length) fBits.push(T('层 ') + fLayers.join('/'))
       if (fCats.length) fBits.push(T('分类 ') + fCats.join('/'))
-      if (fTags.length) fBits.push('tag:' + fTags.map((x) => TAG_SYM[x.op] + x.t).join(' '))
+      if (tagSeq.length) fBits.push('tag:' + seqPairs(tagSeq).map(([a2, b2]) => a2 + b2).join(' '))
       if (fMinImp || fMaxImp) fBits.push(T('重要 ') + (fMinImp || '0') + '~' + (fMaxImp || '100'))
       if (fCAfter || fCBefore) fBits.push(T('创建有时间'))
       if (fMAfter || fMBefore) fBits.push(T('修改有时间'))
@@ -2175,47 +2176,44 @@ window.__ModuleLoader__.load({
             },
           },
 
-            (() => {
-              const rank = { and: 0, or: 1, not: 2 }
-              const ordered = fTags.slice().sort((a2, b2) => rank[a2.op] - rank[b2.op])
-              const out = []
-              let prevOp = null
-              ordered.forEach((x, i) => {
-                if (i > 0 && prevOp && prevOp !== x.op) {
-                  out.push(h('span', { key: 'sep-' + x.op, style: { opacity: 0.3, padding: '0 1px' } }, '│'))
-                }
-                prevOp = x.op
-
-                const showSym = !(i === 0 && x.op === 'and')
-                out.push(h('span', {
-                  key: x.t,
-                  style: {
-                    display: 'inline-flex', alignItems: 'center', gap: 2, padding: '0 2px 0 3px',
-                    borderRadius: 4, fontSize: 11, whiteSpace: 'nowrap',
-
-                    background: x.op === 'not' ? 'rgba(239,68,68,.20)'
-                      : x.op === 'or' ? 'rgba(245,158,11,.20)' : 'rgba(99,102,241,.22)',
-                    border: '1px solid ' + (x.op === 'not' ? 'rgba(239,68,68,.5)'
-                      : x.op === 'or' ? 'rgba(245,158,11,.55)' : 'rgba(99,102,241,.5)'),
-                  },
+            tagSeq.map((it, i) => {
+              const isSym = it.k === 'sym'
+              const isParen = isSym && (it.v === '(' || it.v === ')')
+              const sel = tagCursor === i
+              const tone = !isSym
+                ? (sel ? ['rgba(99,102,241,.30)', 'rgba(99,102,241,.75)'] : ['rgba(128,128,128,.13)', LINE])
+                : isParen ? ['rgba(148,163,184,.26)', 'rgba(148,163,184,.55)']
+                  : it.v === '-' ? ['rgba(239,68,68,.20)', 'rgba(239,68,68,.5)']
+                    : it.v === '|' ? ['rgba(245,158,11,.20)', 'rgba(245,158,11,.55)']
+                      : ['rgba(99,102,241,.22)', 'rgba(99,102,241,.5)']
+              const click = (e) => {
+                e.stopPropagation()
+                setTagCursor(i)
+                if (!isSym) return
+                setTagSeq(tagSeq.map((y, j) => {
+                  if (j !== i) return y
+                  if (y.v === '(') return { k: 'sym', v: ')' }
+                  if (y.v === ')') return { k: 'sym', v: '(' }
+                  return { k: 'sym', v: y.v === '+' ? '|' : y.v === '|' ? '-' : '+' }
+                }))
+              }
+              return h('span', {
+                key: 'tg' + i,
+                onClick: click,
+                title: !isSym ? T('光标放这里 · 退格删除这个 tag（符号会留下）')
+                  : isParen ? T('括号 · 点一下切 ( ↔ )') : T('点一下切换：+ 与 → | 或 → - 非'),
+                style: {
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  minWidth: isSym ? 15 : 0, padding: isSym ? '0 3px' : '0 4px', borderRadius: 4,
+                  fontSize: 11, fontWeight: isSym ? 700 : 400, whiteSpace: 'nowrap',
+                  cursor: 'pointer', background: tone[0], border: '1px solid ' + tone[1],
+                  outline: sel ? '2px solid rgba(99,102,241,.8)' : 'none',
                 },
-                  showSym ? h('span', {
-                    style: { cursor: 'pointer', fontWeight: 700, padding: '0 2px 0 1px' },
-                    title: T(TAG_WORD[x.op]) + T(' · 点一下切换：+ 与（都要有）→ | 或（有其一）→ - 非（排除）'),
-                    onClick: () => setFTags(fTags.map((y) => (y.t === x.t ? { t: y.t, op: nextOp(y.op) } : y))),
-                  }, TAG_SYM[x.op]) : null,
-                  x.t,
-                  h('span', {
-                    style: { cursor: 'pointer', opacity: 0.75, fontWeight: 700, padding: '0 2px' },
-                    title: T('移除'),
-                    onClick: () => setFTags(fTags.filter((y) => y.t !== x.t)),
-                  }, '×')))
-              })
-              return out
-            })(),
+              }, it.v)
+            }),
             h('input', {
               value: tagInput,
-              placeholder: fTags.length ? '' : T('tag 筛选…（+ 与 · | 或 · - 非）'),
+              placeholder: tagSeq.length ? '' : T('tag 筛选…（输入 / 看符号）'),
               style: {
                 flex: '1 1 70px', minWidth: 60, border: 'none', outline: 'none', background: 'transparent',
                 color: 'inherit', fontSize: 11.5, padding: '2px 2px',
@@ -2228,32 +2226,98 @@ window.__ModuleLoader__.load({
                 if (e.key === 'Enter') {
                   e.preventDefault()
                   const raw = tagInput.trim()
-                  const parsed = parseTag(raw)
-                  if (parsed) setFTags([...fTags.filter((y) => y.t !== parsed.t), parsed])
+
+                  if (raw === '(' || raw === ')') {
+                    setTagSeq([...tagSeq, { k: 'sym', v: raw }])
+                    setTagInput(''); return
+                  }
+                  const t = raw.startsWith('/') ? raw.slice(1) : raw
+                  if (t) {
+
+                    const kept = tagSeq.filter((y) => !(y.k === 'tag' && y.v === t))
+                    setTagSeq([...kept, { k: 'sym', v: pendingSym }, { k: 'tag', v: t }])
+                    setPendingSym('+')
+
+                    loadFacets()
+                    setTagInput('')
+                    setTagOpen(true)
+                    return
+                  }
                   setTagInput(''); setTagOpen(false)
                   if (!raw) doSearch()
-                } else if (e.key === 'Backspace' && !tagInput && fTags.length) {
-                  setFTags(fTags.slice(0, -1))
-                } else if (e.key === 'Escape') {
-                  setTagOpen(false)
-                }
+                } else if (e.key === 'Backspace' && !tagInput) {
+                  if (tagSeq.length) {
+                    e.preventDefault()
+
+                    const i = tagCursor >= 0 ? tagCursor : tagSeq.length - 1
+                    setTagSeq(tagSeq.filter((_y, j) => j !== i))
+                    setTagCursor(-1)
+                    if (tagSeq.length > 1) { loadFacets(); setTagOpen(true) }
+                  }
+                } else if (e.key === 'Escape') setTagOpen(false)
               },
             }),
-            tagOpen ? (() => {
-              const all = tagOptions.filter((o) => !fTags.some((y) => y.t === o.tag) && (!tagInput || o.tag.includes(tagInput)))
-              if (!all.length) return null
 
+            tagSeq.length ? h('span', {
+              key: '__tagclear',
+              title: T('清空全部 tag 条件'),
+              onClick: () => { setTagSeq([]); setTagCursor(-1); setTagInput('') },
+              style: { marginLeft: 'auto', cursor: 'pointer', opacity: 0.55, fontWeight: 700, padding: '0 3px', fontSize: 12 },
+            }, '×') : null,
+
+            tagBad ? h('span', {
+              key: '__tagbad',
+              title: T('条件不成立时不会发出检索'),
+              style: { color: '#d9534f', fontSize: 11, whiteSpace: 'nowrap' },
+            }, '⚠ ' + tagBad) : null,
+            tagOpen ? (() => {
+              const slash = tagInput.startsWith('/')
+              const qText = slash ? tagInput.slice(1) : tagInput
+
+              const all = tagOptions.filter((o) => !tagSeq.some((y) => y.k === 'tag' && y.v === o.tag)
+                && (!qText || o.tag.includes(qText)))
+
+              if (!slash && !all.length) return null
               const CAP = 200
               const cand = all.length > CAP ? all.slice(0, CAP) : all
               const rest = all.length - cand.length
+              const symRow = slash ? h('div', {
+                key: '__syms',
+                style: {
+                  display: 'flex', gap: 4, padding: '5px 7px', flexWrap: 'wrap',
+                  borderBottom: '1px solid ' + LINE, marginBottom: 2,
+                },
+              }, ['+', '|', '-', '(', ')'].map((sym) => h('span', {
+                key: 'sym' + sym,
+                onMouseDown: (e) => e.preventDefault(),
+                title: sym === '(' || sym === ')' ? T('插入一个括号') : T('下一个 tag 用这个符号'),
+                onClick: () => {
+                  if (sym === '(' || sym === ')') {
+                    setTagSeq([...tagSeq, { k: 'sym', v: sym }])
+                    setTagInput('')
+                    loadFacets()
+                  } else {
+                    setPendingSym(sym)
+                    setTagInput('')
+                    setTimeout(() => setTagOpen(true), 0)
+                  }
+                },
+                style: {
+                  padding: '1px 7px', borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  background: sym === '-' ? 'rgba(239,68,68,.2)'
+                    : sym === '|' ? 'rgba(245,158,11,.2)'
+                      : sym === '+' ? 'rgba(99,102,241,.22)' : 'rgba(148,163,184,.26)',
+                  border: '1px solid ' + LINE,
+                },
+              }, sym))) : null
               return h('div', {
                 style: {
                   position: 'absolute', top: '100%', left: 0, marginTop: 3, zIndex: 60,
-                  minWidth: 170, maxHeight: 190, overflow: 'auto', borderRadius: 6,
+                  minWidth: 170, maxHeight: 210, overflow: 'auto', borderRadius: 6,
                   border: '1px solid ' + LINE, background: 'Canvas', color: 'CanvasText',
                   boxShadow: '0 8px 24px rgba(0,0,0,.18)',
                 },
-              }, cand.map((o) => h('div', {
+              }, symRow, cand.map((o) => h('div', {
                 key: o.tag,
                 style: {
                   display: 'flex', justifyContent: 'space-between', gap: 10, padding: '4px 9px',
@@ -2261,9 +2325,12 @@ window.__ModuleLoader__.load({
                 },
                 onMouseDown: (e) => e.preventDefault(),
                 onClick: () => {
+                  const kept = tagSeq.filter((y) => !(y.k === 'tag' && y.v === o.tag))
+                  setTagSeq([...kept, { k: 'sym', v: pendingSym }, { k: 'tag', v: o.tag }])
+                  setPendingSym('+')
+                  setTagInput('')
 
-                  setFTags([...fTags.filter((y) => y.t !== o.tag), { t: o.tag, op: 'and' }])
-                  setTagInput(''); setTagOpen(false)
+                  loadFacets(); setTagOpen(true)
                 },
               },
                 h('span', null, o.tag),
@@ -2329,11 +2396,11 @@ window.__ModuleLoader__.load({
               },
               onBlur: () => { if (!fMBefore) setDtType((s) => ({ ...s, mB: 'text' })) },
             })),
-          (fLayers.length || fCats.length || fTags.length || fMinImp || fMaxImp || fCAfter || fCBefore || fMAfter || fMBefore)
+          (fLayers.length || fCats.length || tagSeq.length || fMinImp || fMaxImp || fCAfter || fCBefore || fMAfter || fMBefore)
             ? h('button', {
                 style: { ...S.button, fontSize: 11.5, padding: '2px 8px' },
                 onClick: () => {
-                  setFLayers([]); setFCats([]); setFTags([]); setTagInput(''); setFMinImp(''); setFMaxImp('')
+                  setFLayers([]); setFCats([]); setTagSeq([]); setTagCursor(-1); setTagInput(''); setFMinImp(''); setFMaxImp('')
                   setFCAfter(''); setFCBefore(''); setFMAfter(''); setFMBefore('')
                 },
               }, T('清空筛选'))
