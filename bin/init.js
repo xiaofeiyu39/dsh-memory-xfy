@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 
@@ -28,17 +28,7 @@ function put(relPath, content) {
   created++
 }
 
-put('layers.json', JSON.stringify({
-  version: 1,
-  layers: [
-    { name: 'rules', weight: 5, files: ['AGENTS.md'] },
-    { name: 'docs', weight: 4, dirs: ['docs', 'archived/docs'], exts: ['.md'], exclude_names: ['README.md'] },
-    { name: 'skills', weight: 5, dirs: ['skills', 'archived/skills'], exts: ['.md'], only_names: ['SKILL.md'] },
-    { name: 'daily', weight: 3, dirs: ['daily', 'archived/daily'], exts: ['.md'], window: 3 },
-    { name: 'reviews', weight: 2, dirs: ['reviews', 'archived/reviews'], exts: ['.md'], window: 7 },
-    { name: 'logs', weight: 1, dirs: ['logs', 'archived/logs'], exts: ['.md'], window: 3 },
-  ],
-}, null, 1) + '\n')
+put('layers.json', readFileSync(join(import.meta.dirname, '..', 'default-layers.json'), 'utf8'))
 
 put('AGENTS.md', `# Global instructions
 

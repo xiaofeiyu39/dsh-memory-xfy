@@ -3,25 +3,55 @@ import os, sys, sqlite3, hashlib, time, re, json, pathlib, math, ast
 from datetime import date
 
 HOME = pathlib.Path.home()
-DB = pathlib.Path(os.environ.get("MEMQ_DB") or (HOME / ".dsh" / "cache" / "mem.db"))
-SIGNALS = HOME / ".dsh" / "cache" / "mem-signals.json"
-ACCESS_LOG = HOME / ".dsh" / "cache" / "mem-access.jsonl"
 
-_LAYERS_JSON = HOME / ".dsh" / "layers.json"
+def _layers_path():
+    p = os.environ.get("DSH_LAYERS_FILE")
+    if p:
+        return pathlib.Path(p)
+    ptr = HOME / ".dsh" / ".layers-path"
+    try:
+        if ptr.is_file():
+            q = ptr.read_text(encoding="utf-8").splitlines()[0].strip()
+            if q:
+                return pathlib.Path(q)
+    except Exception:
+        pass
+    return HOME / ".dsh" / "projects" / "dsh-memory-xfy" / "layers.json"
+
+_LAYERS_JSON = _layers_path()
 
 try:
     _LAYERS_CFG = json.loads(_LAYERS_JSON.read_text(encoding="utf-8"))
 except Exception as e:
     sys.exit(f"❌ 读不到层定义 {_LAYERS_JSON}：{e}")
 
+_root_raw = str(_LAYERS_CFG.get("root") or "").strip()
+ROOT = pathlib.Path(_root_raw) if _root_raw else (HOME / ".dsh")
+
+_cold_raw = str(_LAYERS_CFG.get("cold") or "").strip() or "archived"
+if _cold_raw.startswith("/") or ".." in pathlib.PurePosixPath(_cold_raw).parts:
+    sys.exit(f"❌ layers.json 的 cold 要写相对主路径的细分路径（不是绝对路径、不能有 ..）：{_cold_raw}")
+COLD = ROOT / _cold_raw
+
+CACHE = ROOT / "cache"
+
+DB = pathlib.Path(os.environ.get("MEMQ_DB") or (CACHE / "mem.db"))
+SIGNALS = CACHE / "mem-signals.json"
+ACCESS_LOG = CACHE / "mem-access.jsonl"
+
+def _root_of(_layer=None):
+    return ROOT
+
 def _load_layers():
     out = []
     for L in _LAYERS_CFG.get("layers", []):
+        lroot = _root_of(L.get("name") or "")
         files = []
         for f in L.get("files", []):
-            fp = HOME / ".dsh" / f
-            if fp.exists():
-                files.append(fp)
+            for base in (lroot, COLD):
+                fp = base / f
+                if fp.exists():
+                    files.append(fp)
         exts = L.get("exts")
         only = set(L.get("only_names") or [])
         exn = set(L.get("exclude_names") or [])
@@ -68,9 +98,12 @@ def _load_layers():
                 files.append(q)
 
         for d in L.get("dirs", []):
-            base = HOME / ".dsh" / d
-            if base.exists():
-                walk(base, 1, base)
+            if str(d).strip().startswith("/"):
+                sys.exit(f"❌ 层 {L.get('name')} 的 dirs 里要写相对 {lroot} 的细分路径，"
+                         f"不是绝对路径：{d}")
+            for base in (lroot / str(d).strip(), COLD / str(d).strip()):
+                if base.exists():
+                    walk(base, 1, base)
         out.append((L["name"], sorted(set(files)), int(L.get("weight", 3))))
     return out
 
@@ -302,7 +335,7 @@ def index(verbose=True):
             c.execute("DELETE FROM chunk_ts WHERE path=?", (p,))
             c.execute("DELETE FROM files WHERE path=?", (p,))
     c.commit()
-    _sync_tags_from_fm(c)
+    _sync_facets_from_fm(c)
     if verbose:
         total = sum(c.execute("SELECT COUNT(*) FROM " + _t).fetchone()[0] for _t in _ALL_TABLES)
         _hot = c.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
@@ -473,37 +506,65 @@ def _tag_map(tags=None):
                 out.add(str(f))
     return out
 
-def _sync_tags_from_fm(c):
+def _read_head(f, n=16384):
+    try:
+        with open(f, "rb") as fh:
+            return fh.read(n).decode("utf-8", "replace")
+    except Exception:
+        return ""
+
+def _sync_facets_from_fm(c):
     cols = [r[1] for r in c.execute("PRAGMA table_info(tags)")]
     if cols and 'line' in cols:
         c.execute("DROP TABLE tags")
-        cols = []
     c.execute("""CREATE TABLE IF NOT EXISTS tags (
         path TEXT NOT NULL, tag TEXT NOT NULL,
         PRIMARY KEY (path, tag)) WITHOUT ROWID""")
     c.execute("CREATE INDEX IF NOT EXISTS idx_tags_tag ON tags(tag)")
     c.execute("DELETE FROM tags")
-    rows = []
+    c.execute("""CREATE TABLE IF NOT EXISTS cats (
+        path TEXT NOT NULL, cat TEXT NOT NULL,
+        PRIMARY KEY (path, cat)) WITHOUT ROWID""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_cats_cat ON cats(cat)")
+    c.execute("DELETE FROM cats")
+    c.execute("DROP TABLE IF EXISTS facets")
+    c.execute("""CREATE TABLE facets (
+        kind TEXT NOT NULL, zone TEXT NOT NULL, value TEXT NOT NULL, n INT NOT NULL,
+        PRIMARY KEY (kind, zone, value)) WITHOUT ROWID""")
+    tag_rows, cat_rows = [], []
+    cat_n = {}
+    tag_n = {}
     for layer, files, _w in LAYERS:
         for f in files:
-            try:
-                txt = pathlib.Path(f).read_text(encoding="utf-8", errors="replace")
-            except Exception:
-                continue
+            txt = _read_head(f)
             m = re.match(r"^---\n(.*?)\n---\n", txt, re.S)
             if not m:
                 continue
             fm = m.group(1)
-            for field in ("tags",):
-                mm = re.search(r"^" + field + r"\s*:\s*(.*)$", fm, re.M)
-                if not mm:
-                    continue
+            zone = "cold" if _is_archived(f) else "hot"
+            mm = re.search(r"^tags\s*:\s*(.*)$", fm, re.M)
+            if mm:
                 v = mm.group(1).strip().strip('"').strip("'")
                 for t in re.split(r"[\s,]+", v):
                     if t:
-                        rows.append((str(f), t))
-    if rows:
-        c.executemany("INSERT OR IGNORE INTO tags(path, tag) VALUES (?,?)", rows)
+                        tag_rows.append((str(f), t))
+                        tag_n[(zone, t)] = tag_n.get((zone, t), 0) + 1
+            mm = re.search(r"^category\s*:\s*(.*)$", fm, re.M)
+            if mm:
+                v = mm.group(1).strip().strip('"').strip("'")
+                for t in re.split(r"[,\u3001]+", v):
+                    t = t.strip()
+                    if t:
+                        cat_rows.append((str(f), t))
+                        cat_n[(zone, t)] = cat_n.get((zone, t), 0) + 1
+    if tag_rows:
+        c.executemany("INSERT OR IGNORE INTO tags(path, tag) VALUES (?,?)", tag_rows)
+    if cat_rows:
+        c.executemany("INSERT OR IGNORE INTO cats(path, cat) VALUES (?,?)", cat_rows)
+    facet_rows = ([("category", z, v, n) for (z, v), n in cat_n.items()]
+                  + [("tag", z, v, n) for (z, v), n in tag_n.items()])
+    if facet_rows:
+        c.executemany("INSERT OR REPLACE INTO facets(kind, zone, value, n) VALUES(?,?,?,?)", facet_rows)
     c.commit()
 
 def _tag_set(c, tags):
@@ -651,7 +712,9 @@ def _day_of(path):
         return None
 
 def _is_archived(path):
-    return "/archived/" in str(path)
+    s = str(path)
+    c = str(COLD)
+    return s == c or s.startswith(c + os.sep)
 
 def _tbl_of(layer, path):
     if _is_archived(path):
@@ -815,7 +878,7 @@ def query_rows(c, q, limit):
         _tag_hit = _tag_bridge(c, q)
     scored, seen = [], set()
     floor = 1 if len(qb) <= 1 else 2
-    _LAYER_MUL = {"daily": 0.78, "log": 0.78, "reviews": 0.85}
+    _LAYER_MUL = {"daily": 0.78, "logs": 0.78, "reviews": 0.85}
     for body, path, layer, line, weight, low, hit in cand:
         if len(hit) < floor:
             continue
@@ -837,7 +900,7 @@ def query_rows(c, q, limit):
             score *= _tmul
             why.append(f"tag桥×{_tmul:.2f}")
         _dm = re.search(r"(\d{4})-(\d{2})-(\d{2})", str(path))
-        if _dm and layer in ("daily", "log", "reviews"):
+        if _dm and layer in ("daily", "logs", "reviews"):
             try:
                 _d = (date.today() - date(int(_dm.group(1)), int(_dm.group(2)), int(_dm.group(3)))).days
                 _decay = max(0.85, 1 - _d * 0.02)
@@ -968,7 +1031,7 @@ def count_mode(q, n):
     if len(scored) > n:
         print(f"  → 现在取前 {n} 条；想更准就加 --must / --cat / --path 再筛一次")
 
-DOC_LEVEL_LAYERS = {"docs", "skills", "bin"}
+DOC_LEVEL_LAYERS = {"docs", "skills", "info"}
 
 def collapse_by_doc(rows):
     seen, out = {}, []
@@ -1263,10 +1326,34 @@ if __name__ == "__main__":
         stats(); sys.exit(0)
     if a[0] == "--layers":
         layers(); sys.exit(0)
+    if a[0] == "--facets":
+        index(verbose=False)
+        c = connect()
+        agg = {}
+        for kind, zone, value, n in c.execute("SELECT kind, zone, value, n FROM facets").fetchall():
+            key = (kind, value)
+            cur = agg.get(key) or {"n": 0, "hot": 0, "cold": 0}
+            cur["n"] += n
+            cur["cold" if zone == "cold" else "hot"] += n
+            agg[key] = cur
+        out = {"category": [], "tag": []}
+        for (kind, value), v in agg.items():
+            item = {"v": value} if kind == "category" else {"tag": value}
+            item.update(v)
+            out[kind].append(item)
+        out["category"].sort(key=lambda x: (-x["n"], x["v"]))
+        out["tag"].sort(key=lambda x: (-x["n"], x["tag"]))
+        print(json.dumps({"ok": True,
+                          "categories": out["category"], "tags": out["tag"],
+                          "counts": {"category": len(out["category"]), "tag": len(out["tag"])}},
+                         ensure_ascii=False))
+        sys.exit(0)
     if a[0] == "--layers-json":
         print(json.dumps({layer: [str(p) for p in files] for layer, files, _w in LAYERS},
                          ensure_ascii=False))
         sys.exit(0)
+    if a[0] == "--layers-path":
+        print(_LAYERS_JSON); sys.exit(0)
     for flag, env in (("--layer", "MEMQ_LAYER"), ("--must", "MEMQ_MUST"),
                       ("--not", "MEMQ_NOT"), ("--path", "MEMQ_PATH"),
                       ("--allow-layers", "MEMQ_ALLOW"),

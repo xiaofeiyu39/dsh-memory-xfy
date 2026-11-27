@@ -9,7 +9,9 @@ from collections import defaultdict
 from pathlib import Path
 
 HOME = Path.home()
-CACHE = HOME / ".dsh" / "cache"
+import _layersjson as LJ
+
+CACHE = LJ.cache()
 ACCESS_LOG = CACHE / "mem-access.jsonl"
 SIGNALS = CACHE / "mem-signals.json"
 ROTATE_LINES = 5000

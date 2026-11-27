@@ -3,12 +3,14 @@ window.__ModuleLoader__.load({
   factory(require) {
     const React = require('react')
 
-    const UI_ZH = {" / 共 ":" / 共 "," · 共 ":" · 共 "," · 点一下直接在下面打开":" · 点一下直接在下面打开"," 个":" 个"," 个 tag":" 个 tag"," 个文件":" 个文件"," 个胶囊":" 个胶囊"," 字":" 字"," 条":" 条"," 条，只显示前 ":" 条，只显示前 "," 段":" 段"," 筛选":" 筛选","(空)":"(空)","- `#` 标题会变成大字\n":"- `#` 标题会变成大字\n","- `**粗体**`、行内代码、列表、引用、代码块都会正常显示\n":"- `**粗体**`、行内代码、列表、引用、代码块都会正常显示\n","- 长文档可以直接往下滚，不用挤在小窗里":"- 长文档可以直接往下滚，不用挤在小窗里","DSH本体":"DSH本体","importance 0~100：这条记忆被检索命中的次数换算来的（每次 +3，每天 ×0.995）":"importance 0~100：这条记忆被检索命中的次数换算来的（每次 +3，每天 ×0.995）","tag 筛选…（可多选）":"tag 筛选…（可多选）","← 返回结果列表（":"← 返回结果列表（","● 未保存":"● 未保存","✓ 正在检索":"✓ 正在检索","✕ 收起":"✕ 收起","✗ 不检索":"✗ 不检索","⬆️ 提到热区":"⬆️ 提到热区","⬇️ 提到冷区":"⬇️ 提到冷区","【冷区归档】":"【冷区归档】","上下文":"上下文","保存":"保存","保存失败":"保存失败","保存失败：":"保存失败：","保存属性":"保存属性","保存整篇":"保存整篇","修改":"修改","修改 ":"修改 ","修改有时间":"修改有时间","借鉴":"借鉴","全部分类":"全部分类","全部层":"全部层","关键词":"关键词","关键词用空格分隔":"关键词用空格分隔","关闭":"关闭","写下新条目，再点「保存」":"写下新条目，再点「保存」","冷":"冷","冷区记忆":"冷区记忆","冷区：超窗口的旧流水 / 搬进 archived/ 的归档。层名不变，是路径自己编码了冷热。":"冷区：超窗口的旧流水 / 搬进 archived/ 的归档。层名不变，是路径自己编码了冷热。","分类":"分类","分类 ":"分类 ","创建":"创建","创建 ":"创建 ","创建有时间":"创建有时间","删除":"删除","刷新":"刷新","加载中…":"加载中…","原文":"原文","取消":"取消","只看冷区":"只看冷区","只看热区":"只看热区","命中 ":"命中 ","在 Finder 中打开这个目录":"在 Finder 中打开这个目录","完成":"完成","层 ":"层 ","展开全部 ":"展开全部 ","属性保存失败":"属性保存失败","左树已同步只显示命中的文件；点「刷新」恢复初始条件":"左树已同步只显示命中的文件；点「刷新」恢复初始条件","左边点开任意一条记忆，这里就能看到原文，**默认渲染成带层级的排版**。\n\n":"左边点开任意一条记忆，这里就能看到原文，**默认渲染成带层级的排版**。\n\n","已保存":"已保存","已保存并重新索引":"已保存并重新索引","已保存整篇并重新索引":"已保存整篇并重新索引","已删除这一条":"已删除这一条","已复制路径":"已复制路径","已转区":"已转区","已验证":"已验证","循环":"循环","恢复初始条件：清空搜索与筛选、层回到「全部层」、只看热区":"恢复初始条件：清空搜索与筛选、层回到「全部层」、只看热区","想改就点右上角「编辑」；改完点「保存」写回磁盘并自动重新索引。点「删除」要先点两次。\n\n":"想改就点右上角「编辑」；改完点「保存」写回磁盘并自动重新索引。点「删除」要先点两次。\n\n","打不开这一条":"打不开这一条","打不开这个文件":"打不开这个文件","打开":"打开","技术字段 ":"技术字段 ","技能":"技能","技能迭代历史（archived/logs/skills/）住在冷区，默认不搜。":"技能迭代历史（archived/logs/skills/）住在冷区，默认不搜。","把整个文件移回 ~/.dsh/（热区）。冷热只由路径决定，移动即转区。":"把整个文件移回 ~/.dsh/（热区）。冷热只由路径决定，移动即转区。","把整个文件移进 ~/.dsh/archived/（冷区），它就不会再出现在默认检索里。":"把整个文件移进 ~/.dsh/archived/（冷区），它就不会再出现在默认检索里。","把这一段取回原文件，插回它原来的位置（按存档标记里的 after）。":"把这一段取回原文件，插回它原来的位置（按存档标记里的 after）。","把这一节剪出来存进 archived/ 同名文件（原文件少一节，不删内容）。适合把迭代历史、旧版本沉到冷区。":"把这一节剪出来存进 archived/ 同名文件（原文件少一节，不删内容）。适合把迭代历史、旧版本沉到冷区。","搜索词和筛选条件都是空的":"搜索词和筛选条件都是空的","搜记忆…（\"词\" = 必含）":"搜记忆…（\\\"词\\\" = 必含）","操作失败":"操作失败","收起":"收起","收起 tag":"收起 tag","收起结果栏（结果不丢，点「返回结果列表」还在）":"收起结果栏（结果不丢，点「返回结果列表」还在）","改标题/分类/关键词/简介":"改标题/分类/关键词/简介","文件 ":"文件 ","新增一条":"新增一条","新增条目":"新增条目","无命中":"无命中","显示全部 ":"显示全部 ","标题":"标题","树加载失败":"树加载失败","核心":"核心","桌面":"桌面","检索":"检索","正在用 Chrome 打开原文…":"正在用 Chrome 打开原文…","没有命中。换个说法，或用同义词/英文名/报错原文再试。":"没有命中。换个说法，或用同义词/英文名/报错原文再试。","没有命中的文件（点右上「刷新」恢复全树）":"没有命中的文件（点右上「刷新」恢复全树）","清空筛选":"清空筛选","渲染出错：":"渲染出错：","点「冷区记忆」按钮或在这里加 --all 才会进结果。":"点「冷区记忆」按钮或在这里加 --all 才会进结果。","点击复制完整路径\n":"点击复制完整路径\n","热":"热","热区 / 冷区都关着 —— 在统计条上点开一个才有东西看":"热区 / 冷区都关着 —— 在统计条上点开一个才有东西看","热区记忆":"热区记忆","热区：近期流水 + 全部结论层。默认检索范围。":"热区：近期流水 + 全部结论层。默认检索范围。","片段 ":"片段 ","片段操作失败":"片段操作失败","用 Chrome 打开这一轮的**完整原始对话**（原文，未经压缩）":"用 Chrome 打开这一轮的**完整原始对话**（原文，未经压缩）","用默认应用打开这个文件":"用默认应用打开这个文件","确认删除？":"确认删除？","社交":"社交","移除":"移除","第 ":"第 ","简介":"简介","简介：":"简介：","编辑":"编辑","草稿":"草稿","记忆":"记忆","记忆不进上下文，只被检索。这里是全部记忆的全貌——点开就能读，也能改，改完立即生效。":"记忆不进上下文，只被检索。这里是全部记忆的全貌——点开就能读，也能改，改完立即生效。","词\\":"词\\","请求失败":"请求失败","请求失败：":"请求失败：","读不到索引（Host 路由没起来？）":"读不到索引（Host 路由没起来？）","超窗口的旧流水 + 搬进 archived/ 的归档（层名不变，路径自己编码冷热）。默认不选，点开就重搜":"超窗口的旧流水 + 搬进 archived/ 的归档（层名不变，路径自己编码冷热）。默认不选，点开就重搜","转区失败":"转区失败","近期流水 + 全部结论层。默认选中":"近期流水 + 全部结论层。默认选中","还原":"还原","这个层没勾选（在「筛选 → 全部层」里勾上）":"这个层没勾选（在「筛选 → 全部层」里勾上）","重要":"重要","重要 ":"重要 ","重要性上限（0~100）":"重要性上限（0~100）","重要性下限（0~100）· ≥85 核心 · 65~84 已验证 · <65 草稿":"重要性下限（0~100）· ≥85 核心 · 65~84 已验证 · <65 草稿","预览":"预览","高级搜索：层 / 分类 / 重要 / tag / 创建·修改时间":"高级搜索：层 / 分类 / 重要 / tag / 创建·修改时间","（共 ":"（共 ","（点名字看整篇，点三角展开）":"（点名字看整篇，点三角展开）","💡 冷区还有 ":"💡 冷区还有 ","📤 恢复回原位":"📤 恢复回原位","📦 存档这一节":"📦 存档这一节"};
-    const UI_EN = {" / 共 ":" / of "," · 共 ":" · of "," · 点一下直接在下面打开":" · click to open below"," 个":""," 个 tag":" tags"," 个文件":" files"," 个胶囊":" chips"," 字":" chars"," 条":""," 条，只显示前 ":" shown, first "," 段":" chunks"," 筛选":" Filter","(空)":"(empty)","- `#` 标题会变成大字\n":"- `#` headings become large text\n","- `**粗体**`、行内代码、列表、引用、代码块都会正常显示\n":"- `**bold**`, inline code, lists, quotes and code blocks all render normally\n","- 长文档可以直接往下滚，不用挤在小窗里":"- Long documents scroll in place — no cramped box","DSH本体":"DSH core","importance 0~100：这条记忆被检索命中的次数换算来的（每次 +3，每天 ×0.995）":"importance 0–100: derived from how often this memory is retrieved (+3 per hit, ×0.995 per day)","tag 筛选…（可多选）":"filter by tag… (multi-select)","← 返回结果列表（":"← back to results (","● 未保存":"● unsaved","✓ 正在检索":"✓ searching","✕ 收起":"✕ collapse","✗ 不检索":"✗ not searched","⬆️ 提到热区":"⬆️ promote to hot","⬇️ 提到冷区":"⬇️ move to cold","【冷区归档】":"[cold archive]","上下文":"context","保存":"Save","保存失败":"Save failed","保存失败：":"Save failed: ","保存属性":"Save properties","保存整篇":"Save whole file","修改":"Modified","修改 ":"Modified ","修改有时间":"modified time set","借鉴":"reference","全部分类":"All categories","全部层":"All layers","关键词":"Keywords","关键词用空格分隔":"separate keywords with spaces","关闭":"Close","写下新条目，再点「保存」":"write a new entry, then click Save","冷":"cold","冷区记忆":"Cold memory","冷区：超窗口的旧流水 / 搬进 archived/ 的归档。层名不变，是路径自己编码了冷热。":"Cold: stream entries past the window, plus anything moved into archived/. Layer names stay the same — the path alone encodes hot/cold.","分类":"Category","分类 ":"Category ","创建":"Created","创建 ":"Created ","创建有时间":"created time set","删除":"Delete","刷新":"Refresh","加载中…":"Loading…","原文":"Raw","取消":"Cancel","只看冷区":"cold only","只看热区":"hot only","命中 ":"hits ","在 Finder 中打开这个目录":"Reveal this directory in Finder","完成":"Done","层 ":"layer ","展开全部 ":"expand all ","属性保存失败":"Failed to save properties","左树已同步只显示命中的文件；点「刷新」恢复初始条件":"Tree filtered to matching files; click Refresh to reset","左边点开任意一条记忆，这里就能看到原文，**默认渲染成带层级的排版**。\n\n":"Pick any entry on the left and its raw text shows up here, **rendered with structure by default**.\n\n","已保存":"Saved","已保存并重新索引":"Saved and re-indexed","已保存整篇并重新索引":"Whole file saved and re-indexed","已删除这一条":"Entry deleted","已复制路径":"Path copied","已转区":"Moved","已验证":"verified","循环":"Loop","恢复初始条件：清空搜索与筛选、层回到「全部层」、只看热区":"Reset: clear search and filters, all layers, hot only","想改就点右上角「编辑」；改完点「保存」写回磁盘并自动重新索引。点「删除」要先点两次。\n\n":"Click **Edit** in the top right to change it; **Save** writes back to disk and re-indexes. **Delete** needs two clicks.\n\n","打不开这一条":"Could not open this entry","打不开这个文件":"Could not open this file","打开":"Open","技术字段 ":"technical fields ","技能":"Skills","技能迭代历史（archived/logs/skills/）住在冷区，默认不搜。":"Skill iteration history (archived/logs/skills/) lives in cold storage and is not searched by default.","把整个文件移回 ~/.dsh/（热区）。冷热只由路径决定，移动即转区。":"Move the whole file back under ~/.dsh/ (hot). Only the path decides hot/cold — moving is the switch.","把整个文件移进 ~/.dsh/archived/（冷区），它就不会再出现在默认检索里。":"Move the whole file into ~/.dsh/archived/ (cold) and it stops showing up in default search.","把这一段取回原文件，插回它原来的位置（按存档标记里的 after）。":"Take this section back into its source file, at its original position (using the after marker).","把这一节剪出来存进 archived/ 同名文件（原文件少一节，不删内容）。适合把迭代历史、旧版本沉到冷区。":"Cut this section into a same-named file under archived/ (the source keeps everything else). Good for sinking iteration history into cold storage.","搜索词和筛选条件都是空的":"Search and filters are both empty","搜记忆…（\"词\" = 必含）":"search memory… (\"word\" = must contain)","操作失败":"Operation failed","收起":"Collapse","收起 tag":"collapse tags","收起结果栏（结果不丢，点「返回结果列表」还在）":"Collapse the results bar (results are kept — use \"back to results\")","改标题/分类/关键词/简介":"edit title / category / keywords / description","文件 ":"file ","新增一条":"New entry","新增条目":"New entry","无命中":"no hits","显示全部 ":"show all ","标题":"Title","树加载失败":"Failed to load tree","核心":"Core","桌面":"Desktop","检索":"Search","正在用 Chrome 打开原文…":"Opening raw text in Chrome…","没有命中。换个说法，或用同义词/英文名/报错原文再试。":"No hits. Rephrase it, or try a synonym / English name / the verbatim error text.","没有命中的文件（点右上「刷新」恢复全树）":"No matching files (click Refresh to restore the tree)","清空筛选":"Clear filters","渲染出错：":"Render error: ","点「冷区记忆」按钮或在这里加 --all 才会进结果。":"Click the \"Cold memory\" button, or add --all here, to include it.","点击复制完整路径\n":"click to copy the full path\n","热":"hot","热区 / 冷区都关着 —— 在统计条上点开一个才有东西看":"Both hot and cold are off — turn one on in the stats bar to see anything","热区记忆":"Hot memory","热区：近期流水 + 全部结论层。默认检索范围。":"Hot: recent stream plus every distilled layer. The default search scope.","片段 ":"chunk ","片段操作失败":"Chunk operation failed","用 Chrome 打开这一轮的**完整原始对话**（原文，未经压缩）":"Open this round's **full raw conversation** in Chrome (uncompressed)","用默认应用打开这个文件":"Open this file in its default app","确认删除？":"Delete for sure?","社交":"Social","移除":"Remove","第 ":"round ","简介":"Description","简介：":"Description: ","编辑":"Edit","草稿":"draft","记忆":"Memory","记忆不进上下文，只被检索。这里是全部记忆的全貌——点开就能读，也能改，改完立即生效。":"Memory never enters the context; it is only searched. This is the whole picture — open any entry to read or edit it, and changes take effect immediately.","词\\":"word\\","请求失败":"Request failed","请求失败：":"Request failed: ","读不到索引（Host 路由没起来？）":"Cannot read the index (is the host route up?)","超窗口的旧流水 + 搬进 archived/ 的归档（层名不变，路径自己编码冷热）。默认不选，点开就重搜":"Stream entries past the window plus anything in archived/ (layer names unchanged — the path encodes hot/cold). Off by default; turning it on re-searches.","转区失败":"Move failed","近期流水 + 全部结论层。默认选中":"Recent stream plus every distilled layer. On by default.","还原":"Restore","这个层没勾选（在「筛选 → 全部层」里勾上）":"This layer is not selected (tick it under Filter → All layers)","重要":"Importance","重要 ":"imp ","重要性上限（0~100）":"importance upper bound (0–100)","重要性下限（0~100）· ≥85 核心 · 65~84 已验证 · <65 草稿":"importance lower bound (0–100) · ≥85 core · 65–84 verified · <65 draft","预览":"Preview","高级搜索：层 / 分类 / 重要 / tag / 创建·修改时间":"Advanced: layer / category / importance / tag / created·modified time","（共 ":"(","（点名字看整篇，点三角展开）":"(click a name for the whole file, click the triangle to expand)","💡 冷区还有 ":"💡 cold also has ","📤 恢复回原位":"📤 restore to original position","📦 存档这一节":"📦 archive this section"};
+    const UI_ZH = {"增": "增", "查": "查", "改": "改", "删": "删", "增（只往里放新的，不改不删）": "增（只往里放新的，不改不删）", "查（能查看和搜索）": "查（能查看和搜索）", "改（能改已有的）": "改（能改已有的）", "删（能删除）": "删（能删除）", " / 共 ": " / 共 ", " · 共 ": " · 共 ", " · 点一下直接在下面打开": " · 点一下直接在下面打开", " 个": " 个", " 个 tag": " 个 tag", " 个文件": " 个文件", " 个胶囊": " 个胶囊", " 字": " 字", " 条": " 条", " 条，只显示前 ": " 条，只显示前 ", " 段": " 段", " 筛选": " 筛选", "(空)": "(空)", "- `#` 标题会变成大字\n": "- `#` 标题会变成大字\n", "- `**粗体**`、行内代码、列表、引用、代码块都会正常显示\n": "- `**粗体**`、行内代码、列表、引用、代码块都会正常显示\n", "- 长文档可以直接往下滚，不用挤在小窗里": "- 长文档可以直接往下滚，不用挤在小窗里", "DSH本体": "DSH本体", "importance 0~100：这条记忆被检索命中的次数换算来的（每次 +3，每天 ×0.995）": "importance 0~100：这条记忆被检索命中的次数换算来的（每次 +3，每天 ×0.995）", "tag 筛选…（可多选）": "tag 筛选…（可多选）", "← 返回结果列表（": "← 返回结果列表（", "● 未保存": "● 未保存", "✓ 正在检索": "✓ 正在检索", "✕ 收起": "✕ 收起", "✗ 不检索": "✗ 不检索", "⬆️ 提到热区": "⬆️ 提到热区", "⬇️ 提到冷区": "⬇️ 提到冷区", "【冷区归档】": "【冷区归档】", "上下文": "上下文", "保存": "保存", "保存失败": "保存失败", "保存失败：": "保存失败：", "保存属性": "保存属性", "保存整篇": "保存整篇", "修改": "修改", "修改 ": "修改 ", "修改有时间": "修改有时间", "借鉴": "借鉴", "全部分类": "全部分类", "全部层": "全部层", "关键词": "关键词", "关键词用空格分隔": "关键词用空格分隔", "关闭": "关闭", "存放位置": "存放位置", "导出配置": "导出配置", "导入配置": "导入配置", "写下新条目，再点「保存」": "写下新条目，再点「保存」", "冷": "冷", "冷区记忆": "冷区记忆", "本地": "本地", "分享": "分享", "共享": "共享", "同步": "同步", "冷区：超窗口的旧流水 / 搬进 archived/ 的归档。层名不变，是路径自己编码了冷热。": "冷区：超窗口的旧流水 / 搬进 archived/ 的归档。层名不变，是路径自己编码了冷热。", "分类": "分类", "分类 ": "分类 ", "创建": "创建", "创建 ": "创建 ", "创建有时间": "创建有时间", "删除": "删除", "刷新": "刷新", "加载中…": "加载中…", "原文": "原文", "取消": "取消", "只看冷区": "只看冷区", "只看热区": "只看热区", "命中 ": "命中 ", "在 Finder 中打开这个目录": "在 Finder 中打开这个目录", "完成": "完成", "层 ": "层 ", "展开全部 ": "展开全部 ", "属性保存失败": "属性保存失败", "左树已同步只显示命中的文件；点「刷新」恢复初始条件": "左树已同步只显示命中的文件；点「刷新」恢复初始条件", "左边点开任意一条记忆，这里就能看到原文，**默认渲染成带层级的排版**。\n\n": "左边点开任意一条记忆，这里就能看到原文，**默认渲染成带层级的排版**。\n\n", "已保存": "已保存", "已保存并重新索引": "已保存并重新索引", "已保存整篇并重新索引": "已保存整篇并重新索引", "已删除这一条": "已删除这一条", "已复制路径": "已复制路径", "已转区": "已转区", "已验证": "已验证", "循环": "循环", "恢复初始条件：清空搜索与筛选、层回到「全部层」、只看热区": "恢复初始条件：清空搜索与筛选、层回到「全部层」、只看热区", "想改就点右上角「编辑」；改完点「保存」写回磁盘并自动重新索引。点「删除」要先点两次。\n\n": "想改就点右上角「编辑」；改完点「保存」写回磁盘并自动重新索引。点「删除」要先点两次。\n\n", "打不开这一条": "打不开这一条", "打不开这个文件": "打不开这个文件", "打开": "打开", "技术字段 ": "技术字段 ", "技能": "技能", "技能迭代历史（archived/logs/skills/）住在冷区，默认不搜。": "技能迭代历史（archived/logs/skills/）住在冷区，默认不搜。", "把整个文件移回 ~/.dsh/（热区）。冷热只由路径决定，移动即转区。": "把整个文件移回 ~/.dsh/（热区）。冷热只由路径决定，移动即转区。", "把整个文件移进 ~/.dsh/archived/（冷区），它就不会再出现在默认检索里。": "把整个文件移进 ~/.dsh/archived/（冷区），它就不会再出现在默认检索里。", "把这一段取回原文件，插回它原来的位置（按存档标记里的 after）。": "把这一段取回原文件，插回它原来的位置（按存档标记里的 after）。", "把这一节剪出来存进 archived/ 同名文件（原文件少一节，不删内容）。适合把迭代历史、旧版本沉到冷区。": "把这一节剪出来存进 archived/ 同名文件（原文件少一节，不删内容）。适合把迭代历史、旧版本沉到冷区。", "搜索词和筛选条件都是空的": "搜索词和筛选条件都是空的", "搜记忆…（\"词\" = 必含）": "搜记忆…（\\\"词\\\" = 必含）", "操作失败": "操作失败", "收起": "收起", "收起 tag": "收起 tag", "收起结果栏（结果不丢，点「返回结果列表」还在）": "收起结果栏（结果不丢，点「返回结果列表」还在）", "改标题/分类/关键词/简介": "改标题/分类/关键词/简介", "改位置": "改位置", "文件 ": "文件 ", "新增一条": "新增一条", "新增条目": "新增条目", "无命中": "无命中", "显示全部 ": "显示全部 ", "标题": "标题", "树加载失败": "树加载失败", "核心": "核心", "桌面": "桌面", "检索": "检索", "正在用 Chrome 打开原文…": "正在用 Chrome 打开原文…", "没有命中。换个说法，或用同义词/英文名/报错原文再试。": "没有命中。换个说法，或用同义词/英文名/报错原文再试。", "没有命中的文件（点右上「刷新」恢复全树）": "没有命中的文件（点右上「刷新」恢复全树）", "清空筛选": "清空筛选", "渲染出错：": "渲染出错：", "点「冷区记忆」按钮或在这里加 --all 才会进结果。": "点「冷区记忆」按钮或在这里加 --all 才会进结果。", "点击复制完整路径\n": "点击复制完整路径\n", "热": "热", "热区 / 冷区都关着 —— 在统计条上点开一个才有东西看": "热区 / 冷区都关着 —— 在统计条上点开一个才有东西看", "热区记忆": "热区记忆", "热区：近期流水 + 全部结论层。默认检索范围。": "热区：近期流水 + 全部结论层。默认检索范围。", "片段 ": "片段 ", "片段操作失败": "片段操作失败", "用 Chrome 打开这一轮的**完整原始对话**（原文，未经压缩）": "用 Chrome 打开这一轮的**完整原始对话**（原文，未经压缩）", "用默认应用打开这个文件": "用默认应用打开这个文件", "确认删除？": "确认删除？", "社交": "社交", "移除": "移除", "第 ": "第 ", "简介": "简介", "简介：": "简介：", "编辑": "编辑", "草稿": "草稿", "记忆": "记忆", "记忆不进上下文，只被检索。这里是全部记忆的全貌——点开就能读，也能改，改完立即生效。": "记忆不进上下文，只被检索。这里是全部记忆的全貌——点开就能读，也能改，改完立即生效。", "词\\": "词\\", "请求失败": "请求失败", "请求失败：": "请求失败：", "读不到索引（Host 路由没起来？）": "读不到索引（Host 路由没起来？）", "超窗口的旧流水 + 搬进 archived/ 的归档（层名不变，路径自己编码冷热）。默认不选，点开就重搜": "超窗口的旧流水 + 搬进 archived/ 的归档（层名不变，路径自己编码冷热）。默认不选，点开就重搜", "转区失败": "转区失败", "近期流水 + 全部结论层。默认选中": "近期流水 + 全部结论层。默认选中", "还原": "还原", "这个层没勾选（在「筛选 → 全部层」里勾上）": "这个层没勾选（在「筛选 → 全部层」里勾上）", "重要": "重要", "重要 ": "重要 ", "重要性上限（0~100）": "重要性上限（0~100）", "重要性下限（0~100）· ≥85 核心 · 65~84 已验证 · <65 草稿": "重要性下限（0~100）· ≥85 核心 · 65~84 已验证 · <65 草稿", "预览": "预览", "高级搜索：层 / 分类 / 重要 / tag / 创建·修改时间": "高级搜索：层 / 分类 / 重要 / tag / 创建·修改时间", "（共 ": "（共 ", "（点名字看整篇，点三角展开）": "（点名字看整篇，点三角展开）", "💡 冷区还有 ": "💡 冷区还有 ", "📤 恢复回原位": "📤 恢复回原位", "📦 存档这一节": "📦 存档这一节", "": "", "\n\n程序（bin/ projects/ telegram/）不动。": "\n\n程序（bin/ projects/ telegram/）不动。", "\n共 ": "\n共 ", " · 冷 ": " · 冷 ", " 个文件 · ": " 个文件 · ", " 份 .conflict- 副本，本地这稿没动）": " 份 .conflict- 副本，本地这稿没动）", " 层": " 层", " 条路径：": " 条路径：", " 段，只显示前 ": " 段，只显示前 ", " 篇": " 篇", " 篇一样 · ": " 篇一样 · ", " 篇你这边多出来": " 篇你这边多出来", " 篇你这里没有 · ": " 篇你这里没有 · ", " 篇内容不同 · ": " 篇内容不同 · ", " 行": " 行", " 行（shift 点一行可整段选；shift 点方框 = 整段打这一位）": " 行（shift 点一行可整段选；shift 点方框 = 整段打这一位）", "- `rules` 跟着 `AGENTS.md`、`skills` 跟着技能目录，这两层不能改": "- `rules` 跟着 `AGENTS.md`、`skills` 跟着技能目录，这两层不能改", "- 主路径只有一份，可以指到 `.dsh` 之外；改它会连 `mem.db` 一起整体搬\n": "- 主路径只有一份，可以指到 `.dsh` 之外；改它会连 `mem.db` 一起整体搬\n", "- 冷区是热区结构的镜像：`docs` ↔ `archived/docs`、`logs/changelog` ↔ `archived/logs/changelog`\n": "- 冷区是热区结构的镜像：`docs` ↔ `archived/docs`、`logs/changelog` ↔ `archived/logs/changelog`\n", "- 细分路径一律相对主路径（写 `docs`，不是 `/Users/…/docs`）\n": "- 细分路径一律相对主路径（写 `docs`，不是 `/Users/…/docs`）\n", "mem-serve 已自动重启，对方立刻连不上": "mem-serve 已自动重启，对方立刻连不上", "mem-serve 已自动重启，立即可用": "mem-serve 已自动重启，立即可用", "token 已复制": "token 已复制", "← 返回": "← 返回", "⚠️ 搬完对不上：": "⚠️ 搬完对不上：", "。权限见下（只有对方能改）": "。权限见下（只有对方能改）", "」": "」", "」—— ": "」—— ", "不同的：": "不同的：", "不是本插件导出的配置（缺 kind）": "不是本插件导出的配置（缺 kind）", "主服务器给你的 token": "主服务器给你的 token", "主路径": "主路径", "主路径改成哪？（绝对路径，留空 = ~/.dsh）\n所有记忆文件会整体搬过去（包括 mem.db）\n\n现在是：": "主路径改成哪？（绝对路径，留空 = ~/.dsh）\n所有记忆文件会整体搬过去（包括 mem.db）\n\n现在是：", "主路径要给绝对路径（或留空 = ~/.dsh）": "主路径要给绝对路径（或留空 = ~/.dsh）", "会把所有记忆文件整体搬到：\n": "会把所有记忆文件整体搬到：\n", "会真的把整个冷区搬过去（不是软链）：\n": "会真的把整个冷区搬过去（不是软链）：\n", "会真的把文件搬过去（不是软链）：\n": "会真的把文件搬过去（不是软链）：\n", "保存并连接": "保存并连接", "先「保存并连接」拿到权限再同步": "先「保存并连接」拿到权限再同步", "先填服务器网址和 token": "先填服务器网址和 token", "全选": "全选", "写落点 ": "写落点 ", "冷区": "冷区", "冷区统一放在哪个子路径？（相对主路径，默认 archived）\n\n现在是：": "冷区统一放在哪个子路径？（相对主路径，默认 archived）\n\n现在是：", "删除失败：": "删除失败：", "双向同步：两边都能改，冲突走三方合并，合不掉的进 conflict/": "双向同步：两边都能改，冲突走三方合并，合不掉的进 conflict/", "只有本机有这篇（没连远端，或远端权限没覆盖到它）": "只有本机有这篇（没连远端，或远端权限没覆盖到它）", "只能写相对主路径的子路径，不是绝对路径": "只能写相对主路径的子路径，不是绝对路径", "只读授权：这篇以远端为准，本地改了同步时会被远端覆盖": "只读授权：这篇以远端为准，本地改了同步时会被远端覆盖", "同步失败": "同步失败", "同步失败：": "同步失败：", "同步完成：拉回 ": "同步完成：拉回 ", "固定": "固定", "复制失败，手动选中复制：": "复制失败，手动选中复制：", "子路径不能留空": "子路径不能留空", "对方给你：": "对方给你：", "对面没回话": "对面没回话", "导入中…": "导入中…", "导入会覆盖现在的层定义和 token 权限，确定？\n\n配置里有 ": "导入会覆盖现在的层定义和 token 权限，确定？\n\n配置里有 ", "导入失败：": "导入失败：", "导入完成：层定义 + 插件配置都换了（刷新页面生效）": "导入完成：层定义 + 插件配置都换了（刷新页面生效）", "导出包含：层定义 + 每层目录 + token 权限 + 同步地址/token": "导出包含：层定义 + 每层目录 + token 权限 + 同步地址/token", "导出失败：": "导出失败：", "已删掉 token「": "已删掉 token「", "已导出：层定义 + 每层目录 + token 权限 + 同步地址/token": "已导出：层定义 + 每层目录 + token 权限 + 同步地址/token", "已搬到 ": "已搬到 ", "已改名为「": "已改名为「", "已断开同步 —— 现在是纯本地，已经同步下来的文件都留着": "已断开同步 —— 现在是纯本地，已经同步下来的文件都留着", "已新建 profile「": "已新建 profile「", "已标记删除 —— 点「保存」才真删": "已标记删除 —— 点「保存」才真删", "已选 ": "已选 ", "所有记忆文件都在**同一个主路径**下面，不分散。搬家是**真搬**，不是软链。\n\n": "所有记忆文件都在**同一个主路径**下面，不分散。搬家是**真搬**，不是软链。\n\n", "搬家中…": "搬家中…", "搬迁失败：": "搬迁失败：", "收起关键词": "收起关键词", "改名": "改名", "改名失败：": "改名失败：", "改成什么子路径？（相对主路径，比如 docs、logs/changelog）\n\n现在是：": "改成什么子路径？（相对主路径，比如 docs、logs/changelog）\n\n现在是：", "改成别的子路径（真搬）": "改成别的子路径（真搬）", "断开同步": "断开同步", "断开失败：": "断开失败：", "新名字": "新名字", "新建 token": "新建 token", "新建失败：": "新建失败：", "服务器": "服务器", "权限全由主服务器给，这边只能看不能改；同步是整份覆盖本地对应层级。": "权限全由主服务器给，这边只能看不能改；同步是整份覆盖本地对应层级。", "权限没保存上：": "权限没保存上：", "标记删除这个 token": "标记删除这个 token", "没有这一位": "没有这一位", "清掉服务器和 token，回到纯本地（已经同步下来的文件都留着，不会删）": "清掉服务器和 token，回到纯本地（已经同步下来的文件都留着，不会删）", "清空选择": "清空选择", "点一下复制这个 token": "点一下复制这个 token", "热 ": "热 ", "直接放在主路径根下（文件白名单）": "直接放在主路径根下（文件白名单）", "真的删掉（删完自动重启 mem-serve，立刻失效）": "真的删掉（删完自动重启 mem-serve，立刻失效）", "确定": "确定", "立即同步": "立即同步", "给全部": "给全部", "给这个 profile 改个名字（token 值不变）": "给这个 profile 改个名字（token 值不变）", "给选中的 ": "给选中的 ", "缺的：": "缺的：", "网络分享（生成 token）": "网络分享（生成 token）", "记忆同步（导入 token）": "记忆同步（导入 token）", "设置：哪个 profile 能读 / 增 / 改 / 删哪些记忆": "设置：哪个 profile 能读 / 增 / 改 / 删哪些记忆", "读不到层目录：": "读不到层目录：", "读不到设置：": "读不到设置：", "读取中…": "读取中…", "跟对方比：": "跟对方比：", "还没有 token，点 ＋ 新建": "还没有 token，点 ＋ 新建", "这个文件不是合法 JSON": "这个文件不是合法 JSON", "远端能读这篇、但不能改 —— 以远端为准，本地改动同步时会被覆盖": "远端能读这篇、但不能改 —— 以远端为准，本地改动同步时会被覆盖", "连上了：": "连上了：", "连不上：": "连不上：", "连接中…": "连接中…", "选一个 token…": "选一个 token…", "选一个 token（每个 token 就是一套权限）": "选一个 token（每个 token 就是一套权限）", "重启 mem-serve 后才对外生效": "重启 mem-serve 后才对外生效", "重启 mem-serve 才生效": "重启 mem-serve 才生效", "（一份，按各层细分路径镜像：": "（一份，按各层细分路径镜像：", "（含 mem.db）": "（含 mem.db）", "（服务器那份另存 ": "（服务器那份另存 ", "（点一下：全部给 / 全部收回）": "（点一下：全部给 / 全部收回）", "（落地 ": "（落地 ", "（部分）": "（部分）", "（默认 ~/.dsh）": "（默认 ~/.dsh）", "）": "）", "，冲突 ": "，冲突 ", "，被拒 ": "，被拒 ", "还有 ": "还有 ", " 个 · 继续输入缩小范围": " 个 · 继续输入缩小范围"};
+    const UI_EN = {"\u589e": "C", "\u67e5": "R", "\u6539": "U", "\u5220": "D", "\u589e\uff08\u53ea\u5f80\u91cc\u653e\u65b0\u7684\uff0c\u4e0d\u6539\u4e0d\u5220\uff09": "C \u2014 create new only", "\u67e5\uff08\u80fd\u67e5\u770b\u548c\u641c\u7d22\uff09": "R \u2014 read & search", "\u6539\uff08\u80fd\u6539\u5df2\u6709\u7684\uff09": "U \u2014 update existing", "\u5220\uff08\u80fd\u5220\u9664\uff09": "D \u2014 delete", " / \u5171 ": " / of ", " \u00b7 \u5171 ": " \u00b7 of ", " \u00b7 \u70b9\u4e00\u4e0b\u76f4\u63a5\u5728\u4e0b\u9762\u6253\u5f00": " \u00b7 click to open below", " \u4e2a": "", " \u4e2a tag": " tags", " \u4e2a\u6587\u4ef6": " files", " \u4e2a\u80f6\u56ca": " chips", " \u5b57": " chars", " \u6761": "", " \u6761\uff0c\u53ea\u663e\u793a\u524d ": " shown, first ", " \u6bb5": " chunks", " \u7b5b\u9009": " Filter", "(\u7a7a)": "(empty)", "- `#` \u6807\u9898\u4f1a\u53d8\u6210\u5927\u5b57\n": "- `#` headings become large text\n", "- `**\u7c97\u4f53**`\u3001\u884c\u5185\u4ee3\u7801\u3001\u5217\u8868\u3001\u5f15\u7528\u3001\u4ee3\u7801\u5757\u90fd\u4f1a\u6b63\u5e38\u663e\u793a\n": "- `**bold**`, inline code, lists, quotes and code blocks all render normally\n", "- \u957f\u6587\u6863\u53ef\u4ee5\u76f4\u63a5\u5f80\u4e0b\u6eda\uff0c\u4e0d\u7528\u6324\u5728\u5c0f\u7a97\u91cc": "- Long documents scroll in place \u2014 no cramped box", "DSH\u672c\u4f53": "DSH core", "importance 0~100\uff1a\u8fd9\u6761\u8bb0\u5fc6\u88ab\u68c0\u7d22\u547d\u4e2d\u7684\u6b21\u6570\u6362\u7b97\u6765\u7684\uff08\u6bcf\u6b21 +3\uff0c\u6bcf\u5929 \u00d70.995\uff09": "importance 0\u2013100: derived from how often this memory is retrieved (+3 per hit, \u00d70.995 per day)", "tag \u7b5b\u9009\u2026\uff08\u53ef\u591a\u9009\uff09": "filter by tag\u2026 (multi-select)", "\u2190 \u8fd4\u56de\u7ed3\u679c\u5217\u8868\uff08": "\u2190 back to results (", "\u25cf \u672a\u4fdd\u5b58": "\u25cf unsaved", "\u2713 \u6b63\u5728\u68c0\u7d22": "\u2713 searching", "\u2715 \u6536\u8d77": "\u2715 collapse", "\u2717 \u4e0d\u68c0\u7d22": "\u2717 not searched", "\u2b06\ufe0f \u63d0\u5230\u70ed\u533a": "\u2b06\ufe0f promote to hot", "\u2b07\ufe0f \u63d0\u5230\u51b7\u533a": "\u2b07\ufe0f move to cold", "\u3010\u51b7\u533a\u5f52\u6863\u3011": "[cold archive]", "\u4e0a\u4e0b\u6587": "context", "\u4fdd\u5b58": "Save", "\u4fdd\u5b58\u5931\u8d25": "Save failed", "\u4fdd\u5b58\u5931\u8d25\uff1a": "Save failed: ", "\u4fdd\u5b58\u5c5e\u6027": "Save properties", "\u4fdd\u5b58\u6574\u7bc7": "Save whole file", "\u4fee\u6539": "Modified", "\u4fee\u6539 ": "Modified ", "\u4fee\u6539\u6709\u65f6\u95f4": "modified time set", "\u501f\u9274": "reference", "\u5168\u90e8\u5206\u7c7b": "All categories", "\u5168\u90e8\u5c42": "All layers", "\u5173\u952e\u8bcd": "Keywords", "\u5173\u952e\u8bcd\u7528\u7a7a\u683c\u5206\u9694": "separate keywords with spaces", "\u5173\u95ed": "Close", "\u5199\u4e0b\u65b0\u6761\u76ee\uff0c\u518d\u70b9\u300c\u4fdd\u5b58\u300d": "write a new entry, then click Save", "\u51b7": "cold", "\u672c\u5730": "local", "\u5171\u4eab": "shared", "\u5206\u4eab": "shared", "\u540c\u6b65": "sync", "\u5b58\u653e\u4f4d\u7f6e": "Storage location", "\u6539\u4f4d\u7f6e": "Move", "\u4e0d\u80fd\u642c": "fixed", "\u5bfc\u51fa\u914d\u7f6e": "Export config", "\u5bfc\u5165\u914d\u7f6e": "Import config", "\u53ea\u6709\u672c\u673a\u6709\u8fd9\u7bc7\uff08\u6ca1\u8fde\u8fdc\u7aef\uff0c\u6216\u8fdc\u7aef\u6743\u9650\u6ca1\u8986\u76d6\u5230\u5b83\uff09": "This entry exists only on this machine (no remote configured, or the remote grant does not cover it)", "\u8fdc\u7aef\u80fd\u8bfb\u8fd9\u7bc7\u3001\u4f46\u4e0d\u80fd\u6539 \u2014\u2014 \u4ee5\u8fdc\u7aef\u4e3a\u51c6\uff0c\u672c\u5730\u6539\u52a8\u540c\u6b65\u65f6\u4f1a\u88ab\u8986\u76d6": "The remote can read this entry but not write it \u2014 the remote always wins; local edits get overwritten on sync", "\u53cc\u5411\u540c\u6b65\uff1a\u4e24\u8fb9\u90fd\u80fd\u6539\uff0c\u51b2\u7a81\u8d70\u4e09\u65b9\u5408\u5e76\uff0c\u5408\u4e0d\u6389\u7684\u8fdb conflict/": "Two-way sync: both sides can edit; merge is three-way and unsolved conflicts land in conflict/", "\u53ea\u8bfb\u6388\u6743\uff1a\u8fd9\u7bc7\u4ee5\u8fdc\u7aef\u4e3a\u51c6\uff0c\u672c\u5730\u6539\u4e86\u540c\u6b65\u65f6\u4f1a\u88ab\u8fdc\u7aef\u8986\u76d6": "Read-only grant: the remote wins, so local edits get overwritten on sync", "\u51b7\u533a\u8bb0\u5fc6": "Cold memory", "\u51b7\u533a\uff1a\u8d85\u7a97\u53e3\u7684\u65e7\u6d41\u6c34 / \u642c\u8fdb archived/ \u7684\u5f52\u6863\u3002\u5c42\u540d\u4e0d\u53d8\uff0c\u662f\u8def\u5f84\u81ea\u5df1\u7f16\u7801\u4e86\u51b7\u70ed\u3002": "Cold: stream entries past the window, plus anything moved into archived/. Layer names stay the same \u2014 the path alone encodes hot/cold.", "\u5206\u7c7b": "Category", "\u5206\u7c7b ": "Category ", "\u521b\u5efa": "Created", "\u521b\u5efa ": "Created ", "\u521b\u5efa\u6709\u65f6\u95f4": "created time set", "\u5220\u9664": "Delete", "\u5237\u65b0": "Refresh", "\u52a0\u8f7d\u4e2d\u2026": "Loading\u2026", "\u539f\u6587": "Raw", "\u53d6\u6d88": "Cancel", "\u53ea\u770b\u51b7\u533a": "cold only", "\u53ea\u770b\u70ed\u533a": "hot only", "\u547d\u4e2d ": "hits ", "\u5728 Finder \u4e2d\u6253\u5f00\u8fd9\u4e2a\u76ee\u5f55": "Reveal this directory in Finder", "\u5b8c\u6210": "Done", "\u5c42 ": "layer ", "\u5c55\u5f00\u5168\u90e8 ": "expand all ", "\u5c5e\u6027\u4fdd\u5b58\u5931\u8d25": "Failed to save properties", "\u5de6\u6811\u5df2\u540c\u6b65\u53ea\u663e\u793a\u547d\u4e2d\u7684\u6587\u4ef6\uff1b\u70b9\u300c\u5237\u65b0\u300d\u6062\u590d\u521d\u59cb\u6761\u4ef6": "Tree filtered to matching files; click Refresh to reset", "\u5de6\u8fb9\u70b9\u5f00\u4efb\u610f\u4e00\u6761\u8bb0\u5fc6\uff0c\u8fd9\u91cc\u5c31\u80fd\u770b\u5230\u539f\u6587\uff0c**\u9ed8\u8ba4\u6e32\u67d3\u6210\u5e26\u5c42\u7ea7\u7684\u6392\u7248**\u3002\n\n": "Pick any entry on the left and its raw text shows up here, **rendered with structure by default**.\n\n", "\u5df2\u4fdd\u5b58": "Saved", "\u5df2\u4fdd\u5b58\u5e76\u91cd\u65b0\u7d22\u5f15": "Saved and re-indexed", "\u5df2\u4fdd\u5b58\u6574\u7bc7\u5e76\u91cd\u65b0\u7d22\u5f15": "Whole file saved and re-indexed", "\u5df2\u5220\u9664\u8fd9\u4e00\u6761": "Entry deleted", "\u5df2\u590d\u5236\u8def\u5f84": "Path copied", "\u5df2\u8f6c\u533a": "Moved", "\u5df2\u9a8c\u8bc1": "verified", "\u5faa\u73af": "Loop", "\u6062\u590d\u521d\u59cb\u6761\u4ef6\uff1a\u6e05\u7a7a\u641c\u7d22\u4e0e\u7b5b\u9009\u3001\u5c42\u56de\u5230\u300c\u5168\u90e8\u5c42\u300d\u3001\u53ea\u770b\u70ed\u533a": "Reset: clear search and filters, all layers, hot only", "\u60f3\u6539\u5c31\u70b9\u53f3\u4e0a\u89d2\u300c\u7f16\u8f91\u300d\uff1b\u6539\u5b8c\u70b9\u300c\u4fdd\u5b58\u300d\u5199\u56de\u78c1\u76d8\u5e76\u81ea\u52a8\u91cd\u65b0\u7d22\u5f15\u3002\u70b9\u300c\u5220\u9664\u300d\u8981\u5148\u70b9\u4e24\u6b21\u3002\n\n": "Click **Edit** in the top right to change it; **Save** writes back to disk and re-indexes. **Delete** needs two clicks.\n\n", "\u6253\u4e0d\u5f00\u8fd9\u4e00\u6761": "Could not open this entry", "\u6253\u4e0d\u5f00\u8fd9\u4e2a\u6587\u4ef6": "Could not open this file", "\u6253\u5f00": "Open", "\u6280\u672f\u5b57\u6bb5 ": "technical fields ", "\u6280\u80fd": "Skills", "\u6280\u80fd\u8fed\u4ee3\u5386\u53f2\uff08archived/logs/skills/\uff09\u4f4f\u5728\u51b7\u533a\uff0c\u9ed8\u8ba4\u4e0d\u641c\u3002": "Skill iteration history (archived/logs/skills/) lives in cold storage and is not searched by default.", "\u628a\u6574\u4e2a\u6587\u4ef6\u79fb\u56de ~/.dsh/\uff08\u70ed\u533a\uff09\u3002\u51b7\u70ed\u53ea\u7531\u8def\u5f84\u51b3\u5b9a\uff0c\u79fb\u52a8\u5373\u8f6c\u533a\u3002": "Move the whole file back under ~/.dsh/ (hot). Only the path decides hot/cold \u2014 moving is the switch.", "\u628a\u6574\u4e2a\u6587\u4ef6\u79fb\u8fdb ~/.dsh/archived/\uff08\u51b7\u533a\uff09\uff0c\u5b83\u5c31\u4e0d\u4f1a\u518d\u51fa\u73b0\u5728\u9ed8\u8ba4\u68c0\u7d22\u91cc\u3002": "Move the whole file into ~/.dsh/archived/ (cold) and it stops showing up in default search.", "\u628a\u8fd9\u4e00\u6bb5\u53d6\u56de\u539f\u6587\u4ef6\uff0c\u63d2\u56de\u5b83\u539f\u6765\u7684\u4f4d\u7f6e\uff08\u6309\u5b58\u6863\u6807\u8bb0\u91cc\u7684 after\uff09\u3002": "Take this section back into its source file, at its original position (using the after marker).", "\u628a\u8fd9\u4e00\u8282\u526a\u51fa\u6765\u5b58\u8fdb archived/ \u540c\u540d\u6587\u4ef6\uff08\u539f\u6587\u4ef6\u5c11\u4e00\u8282\uff0c\u4e0d\u5220\u5185\u5bb9\uff09\u3002\u9002\u5408\u628a\u8fed\u4ee3\u5386\u53f2\u3001\u65e7\u7248\u672c\u6c89\u5230\u51b7\u533a\u3002": "Cut this section into a same-named file under archived/ (the source keeps everything else). Good for sinking iteration history into cold storage.", "\u641c\u7d22\u8bcd\u548c\u7b5b\u9009\u6761\u4ef6\u90fd\u662f\u7a7a\u7684": "Search and filters are both empty", "\u641c\u8bb0\u5fc6\u2026\uff08\"\u8bcd\" = \u5fc5\u542b\uff09": "search memory\u2026 (\"word\" = must contain)", "\u64cd\u4f5c\u5931\u8d25": "Operation failed", "\u6536\u8d77": "Collapse", "\u6536\u8d77 tag": "collapse tags", "\u6536\u8d77\u7ed3\u679c\u680f\uff08\u7ed3\u679c\u4e0d\u4e22\uff0c\u70b9\u300c\u8fd4\u56de\u7ed3\u679c\u5217\u8868\u300d\u8fd8\u5728\uff09": "Collapse the results bar (results are kept \u2014 use \"back to results\")", "\u6539\u6807\u9898/\u5206\u7c7b/\u5173\u952e\u8bcd/\u7b80\u4ecb": "edit title / category / keywords / description", "\u6587\u4ef6 ": "file ", "\u65b0\u589e\u4e00\u6761": "New entry", "\u65b0\u589e\u6761\u76ee": "New entry", "\u65e0\u547d\u4e2d": "no hits", "\u663e\u793a\u5168\u90e8 ": "show all ", "\u6807\u9898": "Title", "\u6811\u52a0\u8f7d\u5931\u8d25": "Failed to load tree", "\u6838\u5fc3": "Core", "\u684c\u9762": "Desktop", "\u68c0\u7d22": "Search", "\u6b63\u5728\u7528 Chrome \u6253\u5f00\u539f\u6587\u2026": "Opening raw text in Chrome\u2026", "\u6ca1\u6709\u547d\u4e2d\u3002\u6362\u4e2a\u8bf4\u6cd5\uff0c\u6216\u7528\u540c\u4e49\u8bcd/\u82f1\u6587\u540d/\u62a5\u9519\u539f\u6587\u518d\u8bd5\u3002": "No hits. Rephrase it, or try a synonym / English name / the verbatim error text.", "\u6ca1\u6709\u547d\u4e2d\u7684\u6587\u4ef6\uff08\u70b9\u53f3\u4e0a\u300c\u5237\u65b0\u300d\u6062\u590d\u5168\u6811\uff09": "No matching files (click Refresh to restore the tree)", "\u6e05\u7a7a\u7b5b\u9009": "Clear filters", "\u6e32\u67d3\u51fa\u9519\uff1a": "Render error: ", "\u70b9\u300c\u51b7\u533a\u8bb0\u5fc6\u300d\u6309\u94ae\u6216\u5728\u8fd9\u91cc\u52a0 --all \u624d\u4f1a\u8fdb\u7ed3\u679c\u3002": "Click the \"Cold memory\" button, or add --all here, to include it.", "\u70b9\u51fb\u590d\u5236\u5b8c\u6574\u8def\u5f84\n": "click to copy the full path\n", "\u70ed": "hot", "\u70ed\u533a / \u51b7\u533a\u90fd\u5173\u7740 \u2014\u2014 \u5728\u7edf\u8ba1\u6761\u4e0a\u70b9\u5f00\u4e00\u4e2a\u624d\u6709\u4e1c\u897f\u770b": "Both hot and cold are off \u2014 turn one on in the stats bar to see anything", "\u70ed\u533a\u8bb0\u5fc6": "Hot memory", "\u70ed\u533a\uff1a\u8fd1\u671f\u6d41\u6c34 + \u5168\u90e8\u7ed3\u8bba\u5c42\u3002\u9ed8\u8ba4\u68c0\u7d22\u8303\u56f4\u3002": "Hot: recent stream plus every distilled layer. The default search scope.", "\u7247\u6bb5 ": "chunk ", "\u7247\u6bb5\u64cd\u4f5c\u5931\u8d25": "Chunk operation failed", "\u7528 Chrome \u6253\u5f00\u8fd9\u4e00\u8f6e\u7684**\u5b8c\u6574\u539f\u59cb\u5bf9\u8bdd**\uff08\u539f\u6587\uff0c\u672a\u7ecf\u538b\u7f29\uff09": "Open this round's **full raw conversation** in Chrome (uncompressed)", "\u7528\u9ed8\u8ba4\u5e94\u7528\u6253\u5f00\u8fd9\u4e2a\u6587\u4ef6": "Open this file in its default app", "\u786e\u8ba4\u5220\u9664\uff1f": "Delete for sure?", "\u793e\u4ea4": "Social", "\u79fb\u9664": "Remove", "\u7b2c ": "round ", "\u7b80\u4ecb": "Description", "\u7b80\u4ecb\uff1a": "Description: ", "\u7f16\u8f91": "Edit", "\u8349\u7a3f": "draft", "\u8bb0\u5fc6": "Memory", "\u8bb0\u5fc6\u4e0d\u8fdb\u4e0a\u4e0b\u6587\uff0c\u53ea\u88ab\u68c0\u7d22\u3002\u8fd9\u91cc\u662f\u5168\u90e8\u8bb0\u5fc6\u7684\u5168\u8c8c\u2014\u2014\u70b9\u5f00\u5c31\u80fd\u8bfb\uff0c\u4e5f\u80fd\u6539\uff0c\u6539\u5b8c\u7acb\u5373\u751f\u6548\u3002": "Memory never enters the context; it is only searched. This is the whole picture \u2014 open any entry to read or edit it, and changes take effect immediately.", "\u8bcd\\": "word\\", "\u8bf7\u6c42\u5931\u8d25": "Request failed", "\u8bf7\u6c42\u5931\u8d25\uff1a": "Request failed: ", "\u8bfb\u4e0d\u5230\u7d22\u5f15\uff08Host \u8def\u7531\u6ca1\u8d77\u6765\uff1f\uff09": "Cannot read the index (is the host route up?)", "\u8d85\u7a97\u53e3\u7684\u65e7\u6d41\u6c34 + \u642c\u8fdb archived/ \u7684\u5f52\u6863\uff08\u5c42\u540d\u4e0d\u53d8\uff0c\u8def\u5f84\u81ea\u5df1\u7f16\u7801\u51b7\u70ed\uff09\u3002\u9ed8\u8ba4\u4e0d\u9009\uff0c\u70b9\u5f00\u5c31\u91cd\u641c": "Stream entries past the window plus anything in archived/ (layer names unchanged \u2014 the path encodes hot/cold). Off by default; turning it on re-searches.", "\u8f6c\u533a\u5931\u8d25": "Move failed", "\u8fd1\u671f\u6d41\u6c34 + \u5168\u90e8\u7ed3\u8bba\u5c42\u3002\u9ed8\u8ba4\u9009\u4e2d": "Recent stream plus every distilled layer. On by default.", "\u8fd8\u539f": "Restore", "\u8fd9\u4e2a\u5c42\u6ca1\u52fe\u9009\uff08\u5728\u300c\u7b5b\u9009 \u2192 \u5168\u90e8\u5c42\u300d\u91cc\u52fe\u4e0a\uff09": "This layer is not selected (tick it under Filter \u2192 All layers)", "\u91cd\u8981": "Importance", "\u91cd\u8981 ": "imp ", "\u91cd\u8981\u6027\u4e0a\u9650\uff080~100\uff09": "importance upper bound (0\u2013100)", "\u91cd\u8981\u6027\u4e0b\u9650\uff080~100\uff09\u00b7 \u226585 \u6838\u5fc3 \u00b7 65~84 \u5df2\u9a8c\u8bc1 \u00b7 <65 \u8349\u7a3f": "importance lower bound (0\u2013100) \u00b7 \u226585 core \u00b7 65\u201384 verified \u00b7 <65 draft", "\u9884\u89c8": "Preview", "\u9ad8\u7ea7\u641c\u7d22\uff1a\u5c42 / \u5206\u7c7b / \u91cd\u8981 / tag / \u521b\u5efa\u00b7\u4fee\u6539\u65f6\u95f4": "Advanced: layer / category / importance / tag / created\u00b7modified time", "\uff08\u5171 ": "(", "\uff08\u70b9\u540d\u5b57\u770b\u6574\u7bc7\uff0c\u70b9\u4e09\u89d2\u5c55\u5f00\uff09": "(click a name for the whole file, click the triangle to expand)", "\ud83d\udca1 \u51b7\u533a\u8fd8\u6709 ": "\ud83d\udca1 cold also has ", "\ud83d\udce4 \u6062\u590d\u56de\u539f\u4f4d": "\ud83d\udce4 restore to original position", "\ud83d\udce6 \u5b58\u6863\u8fd9\u4e00\u8282": "\ud83d\udce6 archive this section", "": "", "\n\n\u7a0b\u5e8f\uff08bin/ projects/ telegram/\uff09\u4e0d\u52a8\u3002": "\n\nPrograms (bin/ projects/ telegram/) stay put.", "\n\u5171 ": "\ntotal ", " \u00b7 \u51b7 ": " \u00b7 cold ", " \u4e2a\u6587\u4ef6 \u00b7 ": " files \u00b7 ", " \u4efd .conflict- \u526f\u672c\uff0c\u672c\u5730\u8fd9\u7a3f\u6ca1\u52a8\uff09": " .conflict copies; this local draft untouched)", " \u5c42": " layer", " \u6761\u8def\u5f84\uff1a": " paths: ", " \u6bb5\uff0c\u53ea\u663e\u793a\u524d ": " segments, first ", " \u7bc7": " entries", " \u7bc7\u4e00\u6837 \u00b7 ": " identical \u00b7 ", " \u7bc7\u4f60\u8fd9\u8fb9\u591a\u51fa\u6765": " only on this side", " \u7bc7\u4f60\u8fd9\u91cc\u6ca1\u6709 \u00b7 ": " missing here \u00b7 ", " \u7bc7\u5185\u5bb9\u4e0d\u540c \u00b7 ": " differ \u00b7 ", " \u884c": " rows", " \u884c\uff08shift \u70b9\u4e00\u884c\u53ef\u6574\u6bb5\u9009\uff1bshift \u70b9\u65b9\u6846 = \u6574\u6bb5\u6253\u8fd9\u4e00\u4f4d\uff09": " rows (shift-click a row selects the whole block; shift-click a box sets the whole block)", "- `rules` \u8ddf\u7740 `AGENTS.md`\u3001`skills` \u8ddf\u7740\u6280\u80fd\u76ee\u5f55\uff0c\u8fd9\u4e24\u5c42\u4e0d\u80fd\u6539": "- `rules` follows `AGENTS.md`, `skills` follows the skills directory \u2014 these two cannot move", "- \u4e3b\u8def\u5f84\u53ea\u6709\u4e00\u4efd\uff0c\u53ef\u4ee5\u6307\u5230 `.dsh` \u4e4b\u5916\uff1b\u6539\u5b83\u4f1a\u8fde `mem.db` \u4e00\u8d77\u6574\u4f53\u642c\n": "- There is one main path and it may point outside `.dsh`; changing it moves `mem.db` along\n", "- \u51b7\u533a\u662f\u70ed\u533a\u7ed3\u6784\u7684\u955c\u50cf\uff1a`docs` \u2194 `archived/docs`\u3001`logs/changelog` \u2194 `archived/logs/changelog`\n": "- Cold mirrors the hot layout: `docs` \u2194 `archived/docs`, `logs/changelog` \u2194 `archived/logs/changelog`\n", "- \u7ec6\u5206\u8def\u5f84\u4e00\u5f8b\u76f8\u5bf9\u4e3b\u8def\u5f84\uff08\u5199 `docs`\uff0c\u4e0d\u662f `/Users/\u2026/docs`\uff09\n": "- Sub-paths are always relative to the main path (`docs`, not `/Users/\u2026/docs`)\n", "mem-serve \u5df2\u81ea\u52a8\u91cd\u542f\uff0c\u5bf9\u65b9\u7acb\u523b\u8fde\u4e0d\u4e0a": "mem-serve restarted \u2014 the peer loses access immediately", "mem-serve \u5df2\u81ea\u52a8\u91cd\u542f\uff0c\u7acb\u5373\u53ef\u7528": "mem-serve restarted \u2014 live immediately", "token \u5df2\u590d\u5236": "token copied", "\u2190 \u8fd4\u56de": "\u2190 back", "\u26a0\ufe0f \u642c\u5b8c\u5bf9\u4e0d\u4e0a\uff1a": "\u26a0\ufe0f mismatch after the move: ", "\u3002\u6743\u9650\u89c1\u4e0b\uff08\u53ea\u6709\u5bf9\u65b9\u80fd\u6539\uff09": ". Permissions below (only the peer can change them)", "\u300d": "\u201d", "\u300d\u2014\u2014 ": "\u201d \u2014 ", "\u4e0d\u540c\u7684\uff1a": "differ: ", "\u4e0d\u662f\u672c\u63d2\u4ef6\u5bfc\u51fa\u7684\u914d\u7f6e\uff08\u7f3a kind\uff09": "not an export from this plugin (missing kind)", "\u4e3b\u670d\u52a1\u5668\u7ed9\u4f60\u7684 token": "the token the main server gave you", "\u4e3b\u8def\u5f84": "Main path", "\u4e3b\u8def\u5f84\u6539\u6210\u54ea\uff1f\uff08\u7edd\u5bf9\u8def\u5f84\uff0c\u7559\u7a7a = ~/.dsh\uff09\n\u6240\u6709\u8bb0\u5fc6\u6587\u4ef6\u4f1a\u6574\u4f53\u642c\u8fc7\u53bb\uff08\u5305\u62ec mem.db\uff09\n\n\u73b0\u5728\u662f\uff1a": "New main path? (absolute, blank = ~/.dsh)\nEvery memory file moves over (mem.db included)\n\nCurrently: ", "\u4e3b\u8def\u5f84\u8981\u7ed9\u7edd\u5bf9\u8def\u5f84\uff08\u6216\u7559\u7a7a = ~/.dsh\uff09": "Main path must be absolute (or blank = ~/.dsh)", "\u4f1a\u628a\u6240\u6709\u8bb0\u5fc6\u6587\u4ef6\u6574\u4f53\u642c\u5230\uff1a\n": "All memory files will move to:\n", "\u4f1a\u771f\u7684\u628a\u6574\u4e2a\u51b7\u533a\u642c\u8fc7\u53bb\uff08\u4e0d\u662f\u8f6f\u94fe\uff09\uff1a\n": "The whole cold zone will really move (not a symlink):\n", "\u4f1a\u771f\u7684\u628a\u6587\u4ef6\u642c\u8fc7\u53bb\uff08\u4e0d\u662f\u8f6f\u94fe\uff09\uff1a\n": "Files will really move (not a symlink):\n", "\u4fdd\u5b58\u5e76\u8fde\u63a5": "Save & connect", "\u5148\u300c\u4fdd\u5b58\u5e76\u8fde\u63a5\u300d\u62ff\u5230\u6743\u9650\u518d\u540c\u6b65": "Save & connect first to get permissions before syncing", "\u5148\u586b\u670d\u52a1\u5668\u7f51\u5740\u548c token": "Fill in the server URL and token first", "\u5168\u9009": "Select all", "\u5199\u843d\u70b9 ": "Writes to ", "\u51b7\u533a": "Cold zone", "\u51b7\u533a\u7edf\u4e00\u653e\u5728\u54ea\u4e2a\u5b50\u8def\u5f84\uff1f\uff08\u76f8\u5bf9\u4e3b\u8def\u5f84\uff0c\u9ed8\u8ba4 archived\uff09\n\n\u73b0\u5728\u662f\uff1a": "Cold zone sub-path? (relative to the main path, default archived)\n\nCurrently: ", "\u5220\u9664\u5931\u8d25\uff1a": "Delete failed: ", "\u53ea\u80fd\u5199\u76f8\u5bf9\u4e3b\u8def\u5f84\u7684\u5b50\u8def\u5f84\uff0c\u4e0d\u662f\u7edd\u5bf9\u8def\u5f84": "Must be a sub-path relative to the main path, not absolute", "\u540c\u6b65\u5931\u8d25": "Sync failed", "\u540c\u6b65\u5931\u8d25\uff1a": "Sync failed: ", "\u540c\u6b65\u5b8c\u6210\uff1a\u62c9\u56de ": "Sync done: pulled ", "\u56fa\u5b9a": "fixed", "\u590d\u5236\u5931\u8d25\uff0c\u624b\u52a8\u9009\u4e2d\u590d\u5236\uff1a": "Copy failed \u2014 select and copy manually: ", "\u5b50\u8def\u5f84\u4e0d\u80fd\u7559\u7a7a": "Sub-path cannot be empty", "\u5bf9\u65b9\u7ed9\u4f60\uff1a": "The peer gives you: ", "\u5bf9\u9762\u6ca1\u56de\u8bdd": "No reply from the peer", "\u5bfc\u5165\u4e2d\u2026": "Importing\u2026", "\u5bfc\u5165\u4f1a\u8986\u76d6\u73b0\u5728\u7684\u5c42\u5b9a\u4e49\u548c token \u6743\u9650\uff0c\u786e\u5b9a\uff1f\n\n\u914d\u7f6e\u91cc\u6709 ": "Import overwrites the current layers and token permissions. Sure?\n\nThe config has ", "\u5bfc\u5165\u5931\u8d25\uff1a": "Import failed: ", "\u5bfc\u5165\u5b8c\u6210\uff1a\u5c42\u5b9a\u4e49 + \u63d2\u4ef6\u914d\u7f6e\u90fd\u6362\u4e86\uff08\u5237\u65b0\u9875\u9762\u751f\u6548\uff09": "Import done: layers and plugin config replaced (refresh to apply)", "\u5bfc\u51fa\u5305\u542b\uff1a\u5c42\u5b9a\u4e49 + \u6bcf\u5c42\u76ee\u5f55 + token \u6743\u9650 + \u540c\u6b65\u5730\u5740/token": "Export contains: layers + per-layer dirs + token permissions + sync URL/token", "\u5bfc\u51fa\u5931\u8d25\uff1a": "Export failed: ", "\u5df2\u5220\u6389 token\u300c": "Token deleted \u201c", "\u5df2\u5bfc\u51fa\uff1a\u5c42\u5b9a\u4e49 + \u6bcf\u5c42\u76ee\u5f55 + token \u6743\u9650 + \u540c\u6b65\u5730\u5740/token": "Exported: layers + per-layer dirs + token permissions + sync URL/token", "\u5df2\u642c\u5230 ": "Moved to ", "\u5df2\u6539\u540d\u4e3a\u300c": "Renamed to \u201c", "\u5df2\u65ad\u5f00\u540c\u6b65 \u2014\u2014 \u73b0\u5728\u662f\u7eaf\u672c\u5730\uff0c\u5df2\u7ecf\u540c\u6b65\u4e0b\u6765\u7684\u6587\u4ef6\u90fd\u7559\u7740": "Sync disconnected \u2014 local only now, already-synced files are kept", "\u5df2\u65b0\u5efa profile\u300c": "Profile created \u201c", "\u5df2\u6807\u8bb0\u5220\u9664 \u2014\u2014 \u70b9\u300c\u4fdd\u5b58\u300d\u624d\u771f\u5220": "Marked for deletion \u2014 press Save to really delete", "\u5df2\u9009 ": "Selected ", "\u6240\u6709\u8bb0\u5fc6\u6587\u4ef6\u90fd\u5728**\u540c\u4e00\u4e2a\u4e3b\u8def\u5f84**\u4e0b\u9762\uff0c\u4e0d\u5206\u6563\u3002\u642c\u5bb6\u662f**\u771f\u642c**\uff0c\u4e0d\u662f\u8f6f\u94fe\u3002\n\n": "Every memory file lives under **one main path**, never scattered. Moving is a **real move**, not a symlink.\n\n", "\u642c\u5bb6\u4e2d\u2026": "Moving\u2026", "\u642c\u8fc1\u5931\u8d25\uff1a": "Move failed: ", "\u6536\u8d77\u5173\u952e\u8bcd": "collapse keywords", "\u6539\u540d": "Rename", "\u6539\u540d\u5931\u8d25\uff1a": "Rename failed: ", "\u6539\u6210\u4ec0\u4e48\u5b50\u8def\u5f84\uff1f\uff08\u76f8\u5bf9\u4e3b\u8def\u5f84\uff0c\u6bd4\u5982 docs\u3001logs/changelog\uff09\n\n\u73b0\u5728\u662f\uff1a": "New sub-path? (relative to the main path, e.g. docs, logs/changelog)\n\nCurrently: ", "\u6539\u6210\u522b\u7684\u5b50\u8def\u5f84\uff08\u771f\u642c\uff09": "change to another sub-path (real move)", "\u65ad\u5f00\u540c\u6b65": "Disconnect sync", "\u65ad\u5f00\u5931\u8d25\uff1a": "Disconnect failed: ", "\u65b0\u540d\u5b57": "New name", "\u65b0\u5efa token": "New token", "\u65b0\u5efa\u5931\u8d25\uff1a": "Create failed: ", "\u670d\u52a1\u5668": "Server", "\u6743\u9650\u5168\u7531\u4e3b\u670d\u52a1\u5668\u7ed9\uff0c\u8fd9\u8fb9\u53ea\u80fd\u770b\u4e0d\u80fd\u6539\uff1b\u540c\u6b65\u662f\u6574\u4efd\u8986\u76d6\u672c\u5730\u5bf9\u5e94\u5c42\u7ea7\u3002": "Permissions come from the main server; this side can only read. Sync overwrites the matching local layer wholesale.", "\u6743\u9650\u6ca1\u4fdd\u5b58\u4e0a\uff1a": "Permissions not saved: ", "\u6807\u8bb0\u5220\u9664\u8fd9\u4e2a token": "Mark this token for deletion", "\u6ca1\u6709\u8fd9\u4e00\u4f4d": "no such bit", "\u6e05\u6389\u670d\u52a1\u5668\u548c token\uff0c\u56de\u5230\u7eaf\u672c\u5730\uff08\u5df2\u7ecf\u540c\u6b65\u4e0b\u6765\u7684\u6587\u4ef6\u90fd\u7559\u7740\uff0c\u4e0d\u4f1a\u5220\uff09": "Clear the server and token, back to local-only (already-synced files are kept)", "\u6e05\u7a7a\u9009\u62e9": "Clear selection", "\u70b9\u4e00\u4e0b\u590d\u5236\u8fd9\u4e2a token": "click to copy this token", "\u70ed ": "hot ", "\u76f4\u63a5\u653e\u5728\u4e3b\u8def\u5f84\u6839\u4e0b\uff08\u6587\u4ef6\u767d\u540d\u5355\uff09": "placed right under the main path (file whitelist)", "\u771f\u7684\u5220\u6389\uff08\u5220\u5b8c\u81ea\u52a8\u91cd\u542f mem-serve\uff0c\u7acb\u523b\u5931\u6548\uff09": "really delete (mem-serve restarts and it dies at once)", "\u786e\u5b9a": "OK", "\u7acb\u5373\u540c\u6b65": "Sync now", "\u7ed9\u5168\u90e8": "grant all", "\u7ed9\u8fd9\u4e2a profile \u6539\u4e2a\u540d\u5b57\uff08token \u503c\u4e0d\u53d8\uff09": "rename this profile (token value unchanged)", "\u7ed9\u9009\u4e2d\u7684 ": "for the selected ", "\u7f3a\u7684\uff1a": "missing: ", "\u7f51\u7edc\u5206\u4eab\uff08\u751f\u6210 token\uff09": "Network share (make token)", "\u8bb0\u5fc6\u540c\u6b65\uff08\u5bfc\u5165 token\uff09": "Memory sync (import token)", "\u8bbe\u7f6e\uff1a\u54ea\u4e2a profile \u80fd\u8bfb / \u589e / \u6539 / \u5220\u54ea\u4e9b\u8bb0\u5fc6": "Settings: which profile may read / create / update / delete which memories", "\u8bfb\u4e0d\u5230\u5c42\u76ee\u5f55\uff1a": "Cannot read layer dirs: ", "\u8bfb\u4e0d\u5230\u8bbe\u7f6e\uff1a": "Cannot read settings: ", "\u8bfb\u53d6\u4e2d\u2026": "Reading\u2026", "\u8ddf\u5bf9\u65b9\u6bd4\uff1a": "vs the peer: ", "\u8fd8\u6ca1\u6709 token\uff0c\u70b9 \uff0b \u65b0\u5efa": "No token yet \u2014 click \uff0b to create one", "\u8fd9\u4e2a\u6587\u4ef6\u4e0d\u662f\u5408\u6cd5 JSON": "This file is not valid JSON", "\u8fde\u4e0a\u4e86\uff1a": "Connected: ", "\u8fde\u4e0d\u4e0a\uff1a": "Cannot connect: ", "\u8fde\u63a5\u4e2d\u2026": "Connecting\u2026", "\u9009\u4e00\u4e2a token\u2026": "pick a token\u2026", "\u9009\u4e00\u4e2a token\uff08\u6bcf\u4e2a token \u5c31\u662f\u4e00\u5957\u6743\u9650\uff09": "pick a token (each token is one permission set)", "\u91cd\u542f mem-serve \u540e\u624d\u5bf9\u5916\u751f\u6548": "takes effect for peers after mem-serve restarts", "\u91cd\u542f mem-serve \u624d\u751f\u6548": "takes effect after mem-serve restarts", "\uff08\u4e00\u4efd\uff0c\u6309\u5404\u5c42\u7ec6\u5206\u8def\u5f84\u955c\u50cf\uff1a": "(one copy, mirroring each layer's sub-path: ", "\uff08\u542b mem.db\uff09": "(mem.db included)", "\uff08\u670d\u52a1\u5668\u90a3\u4efd\u53e6\u5b58 ": "(the server copy saved at ", "\uff08\u70b9\u4e00\u4e0b\uff1a\u5168\u90e8\u7ed9 / \u5168\u90e8\u6536\u56de\uff09": "(click: grant all / revoke all)", "\uff08\u843d\u5730 ": "(lands at ", "\uff08\u90e8\u5206\uff09": "(partial)", "\uff08\u9ed8\u8ba4 ~/.dsh\uff09": "(default ~/.dsh)", "\uff09": ")", "\uff0c\u51b2\u7a81 ": ", conflicts ", "\uff0c\u88ab\u62d2 ": ", rejected ", "\u8fd8\u6709 ": "and ", " \u4e2a \u00b7 \u7ee7\u7eed\u8f93\u5165\u7f29\u5c0f\u8303\u56f4": " more \u00b7 keep typing to narrow"};
     let T = (k) => k
     const h = React.createElement
 
     const LINE = 'rgba(128,128,128,0.35)'
+
+    const tilde = (p) => String(p || '').replace(/^\/Users\/[^/]+\//, '~/')
     const HILITE = 'rgba(128,128,128,0.20)'
     const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
@@ -33,7 +35,15 @@ window.__ModuleLoader__.load({
       font: 'inherit', fontSize: 11.5,
     }
 
-    function MultiSelect({ allLabel, options, value, onChange }) {
+    const FILE_BIT_START = 1
+    const ACL_BITS = [
+      { key: 'add', ch: '增', label: '增（只往里放新的，不改不删）' },
+      { key: 'read', ch: '查', label: '查（能查看和搜索）' },
+      { key: 'put', ch: '改', label: '改（能改已有的）' },
+      { key: 'del', ch: '删', label: '删（能删除）' },
+    ]
+
+    function MultiSelect({ allLabel, options, value, onChange, onOpen }) {
       const [open, setOpen] = React.useState(false)
       const box = React.useRef(null)
       React.useEffect(() => {
@@ -45,22 +55,34 @@ window.__ModuleLoader__.load({
       const label = !value.length ? allLabel
         : value.length <= 2 ? value.join(' · ')
         : value.slice(0, 2).join(' · ') + ' +' + (value.length - 2)
+      const oVal = (o) => (typeof o === 'object' && o ? o.v : o)
+      const oN = (o) => (typeof o === 'object' && o ? o.n : null)
+      const oFoot = (o) => (typeof o === 'object' && o && (o.hot || o.cold)
+        ? '热 ' + (o.hot || 0) + ' · 冷 ' + (o.cold || 0) : '')
       const toggle = (v) => onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v])
       return h('div', { ref: box, style: { position: 'relative', display: 'inline-block' } },
-        h('button', { style: MS_BTN, onClick: () => setOpen(!open), title: value.join(' · ') || allLabel },
+        h('button', {
+          style: MS_BTN,
+          onClick: () => { if (!open && onOpen) onOpen(); setOpen(!open) },
+          title: value.join(' · ') || allLabel,
+        },
           h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis' } }, label),
           h('span', { style: { opacity: 0.5, fontSize: 9 } }, '▾')),
         open ? h('div', { style: MS_PANEL },
-          options.map((v) => {
+          options.map((o) => {
+            const v = oVal(o)
             const on = value.includes(v)
+            const n = oN(o)
             return h('div', {
               key: v,
+              title: oFoot(o),
               style: { display: 'flex', alignItems: 'center', gap: 6, padding: '4px 9px', fontSize: 11.5, cursor: 'pointer' },
               onMouseDown: (e) => e.preventDefault(),
               onClick: () => toggle(v),
             },
               h('span', { style: { width: 11, opacity: on ? 1 : 0.28 } }, on ? '✓' : '☐'),
-              h('span', null, v))
+              h('span', { style: { flex: 1 } }, v),
+              n === null ? null : h('span', { style: { opacity: 0.45, fontSize: 10.5 } }, n))
           })) : null)
     }
 
@@ -181,8 +203,8 @@ window.__ModuleLoader__.load({
     }
 
     function Node(props) {
-      const { depth, label, meta, open, active, leaf, onClick, onLabelClick, onFolderClick, title, dim } = props
-      const stop = (fn) => (e) => { e.stopPropagation(); if (fn) fn() }
+      const { depth, label, meta, open, active, leaf, onClick, onLabelClick, onFolderClick, title, dim, aclBits, aclOwn, onAclBit, bitStart = 0 } = props
+      const stop = (fn) => (e) => { e.stopPropagation(); if (fn) fn(e) }
       const [hover, setHover] = React.useState(false)
       return h('div', {
         onClick,
@@ -220,6 +242,29 @@ window.__ModuleLoader__.load({
           onClick: stop(onFolderClick),
         }, '📁') : null,
         meta ? h('span', { style: { flex: '0 0 auto', opacity: 0.45, fontSize: 11 } }, meta) : null,
+
+        typeof aclBits === 'undefined' ? null : h('span', {
+          style: { display: 'inline-flex', gap: 2, flex: '0 0 auto', alignItems: 'center' },
+        }, ACL_BITS.slice(bitStart).map((b, j) => h('span', {
+          key: b.key,
+
+          title: T(b.label) + (aclBits[j] === null ? T('（部分）') : ''),
+          style: {
+            width: 14, height: 14, lineHeight: '13px', textAlign: 'center',
+            fontSize: 9.5, fontFamily: 'inherit', borderRadius: 3,
+
+            fontWeight: aclBits[j] === false ? 400 : 600,
+            color: aclBits[j] === true ? '#ffffff'
+              : aclBits[j] === null ? '#374151' : '#9ca3af',
+            background: aclBits[j] === true ? '#9ca3af'
+              : aclBits[j] === null ? '#d1d5db' : '#f3f4f6',
+            border: (aclOwn && aclOwn[j]) ? '2px solid #6366f1'
+              : (aclBits[j] === false ? '1px solid #e5e7eb' : '1px solid transparent'),
+            cursor: 'pointer', userSelect: 'none',
+          },
+
+          onClick: stop((e) => onAclBit(j + bitStart, !!(e && e.shiftKey))),
+        }, T(b.ch))))
       )
     }
 
@@ -428,7 +473,180 @@ window.__ModuleLoader__.load({
           .then((d) => setTagOptions(d.tags || []))
           .catch(() => setTagOptions([]))
       }, [])
+
+      const [catOptions, setCatOptions] = React.useState([])
+
+      const loadFacets = React.useCallback(() => {
+        const p2 = new URLSearchParams()
+
+        const inlineMust = []
+        let qClean = q.trim()
+        qClean = qClean.replace(/["“”「」]([^"“”「」]+)["“”「」]/g, (_m, inner) => {
+          const t = String(inner).trim()
+          if (t) inlineMust.push(t)
+          return ' '
+        })
+        const parts = qClean.split(/\s+/).filter(Boolean)
+        for (const p3 of parts) if (p3.startsWith('+') && p3.length > 1) inlineMust.push(p3.slice(1))
+        qClean = parts.filter((p3) => !(p3.startsWith('+') && p3.length > 1)).join(' ')
+        if (qClean) p2.set('q', qClean)
+        if (inlineMust.length) p2.set('must', inlineMust.join(' '))
+        p2.set('n', String(searchLimit))
+        if (fLayers.length) p2.set('layer', fLayers.join(','))
+        if (fCats.length) p2.set('category', fCats.join(','))
+        if (fTags.length) p2.set('tag', fTags.join(','))
+        if (fMinImp) p2.set('minimp', fMinImp)
+        if (fMaxImp) p2.set('maximp', fMaxImp)
+        p2.set('zone', fZone.length === 0 ? 'none' : fZone.length === 1 ? fZone[0] : 'both')
+        fetch('/memory-xfy/facets?' + p2.toString()).then((r) => r.json())
+          .then((d) => {
+            if (!d.ok) return
+            setCatOptions(d.categories || [])
+            setTagOptions(d.tags || [])
+          })
+          .catch(() => {  })
+      }, [q, fLayers, fCats, fTags, fMinImp, fMaxImp, fZone])
       const [busy, setBusy] = React.useState(false)
+
+      const [cfgOpen, setCfgOpen] = React.useState(false)
+      const [cfgData, setCfgData] = React.useState(null)
+      const [cfgErr, setCfgErr] = React.useState('')
+
+      const [cfgTab, setCfgTab] = React.useState('')
+
+      const [layoutData, setLayoutData] = React.useState(null)
+      const layoutRows = layoutData ? layoutData.layers : null
+      const [layoutBusy, setLayoutBusy] = React.useState(false)
+      const [layoutMsg, setLayoutMsg] = React.useState('')
+      const fmtBytes = (b) => {
+        if (!b) return '0 B'
+        if (b < 1024) return b + ' B'
+        if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'
+        if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB'
+        return (b / 1073741824).toFixed(2) + ' GB'
+      }
+      const loadLayout = () => {
+        fetch('/memory-xfy/layout').then((r) => r.json())
+          .then((d) => {
+            if (d.ok) setLayoutData(d)
+            else setLayoutMsg(T('读不到层目录：') + (d.error || ''))
+          })
+          .catch((e) => setLayoutMsg(String(e)))
+      }
+
+      const savePath = (payload, how) => {
+        setLayoutBusy(true); setLayoutMsg(T('搬家中…'))
+        fetch('/memory-xfy/layout-save', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).then((r) => r.json())
+          .then((d) => {
+            setLayoutBusy(false)
+            if (!d.ok) return setLayoutMsg(T('搬迁失败：') + (d.error || ''))
+            setLayoutMsg(d.verified
+              ? T('已搬到 ') + how + ' · ' + d.after.n + T(' 个文件 · ') + fmtBytes(d.after.b) + ' ✅'
+              : T('⚠️ 搬完对不上：') + (d.error || ''))
+            loadLayout()
+          })
+          .catch((e) => { setLayoutBusy(false); setLayoutMsg(String(e)) })
+      }
+
+      const editDir = (layer, index, raw, files, bytes) => {
+        const next = window.prompt(
+          T('改成什么子路径？（相对主路径，比如 docs、logs/changelog）\n\n现在是：') + raw, raw)
+        if (next === null) return
+        const to = String(next).trim()
+        if (to === raw) return
+        if (!to) return setLayoutMsg(T('子路径不能留空'))
+        if (to.startsWith('/')) return setLayoutMsg(T('只能写相对主路径的子路径，不是绝对路径'))
+        if (!window.confirm(T('会真的把文件搬过去（不是软链）：\n')
+          + raw + ' → ' + to + '\n' + files + T(' 个文件 · ') + fmtBytes(bytes))) return
+        savePath({ kind: 'dir', layer, index, to }, to)
+      }
+      const editCold = (raw, files, bytes) => {
+        const next = window.prompt(
+          T('冷区统一放在哪个子路径？（相对主路径，默认 archived）\n\n现在是：') + (raw || 'archived'), raw)
+        if (next === null) return
+        const to = String(next).trim() || 'archived'
+        if (to === raw) return
+        if (to.startsWith('/')) return setLayoutMsg(T('只能写相对主路径的子路径，不是绝对路径'))
+        if (!window.confirm(T('会真的把整个冷区搬过去（不是软链）：\n')
+          + (raw || 'archived') + ' → ' + to + T('\n共 ') + files + T(' 个文件 · ') + fmtBytes(bytes))) return
+        savePath({ kind: 'cold', to }, to)
+      }
+
+      const editRoot = (raw, abs, files, bytes) => {
+        const next = window.prompt(
+          T('主路径改成哪？（绝对路径，留空 = ~/.dsh）\n所有记忆文件会整体搬过去（包括 mem.db）\n\n现在是：')
+            + (raw || abs), raw)
+        if (next === null) return
+        const to = String(next).trim()
+        if (to === raw) return
+        if (to && to[0] !== '/') return setLayoutMsg(T('主路径要给绝对路径（或留空 = ~/.dsh）'))
+        if (!window.confirm(T('会把所有记忆文件整体搬到：\n')
+          + (to || '~/.dsh') + T('\n共 ') + files + T(' 个文件 · ') + fmtBytes(bytes)
+          + T('\n\n程序（bin/ projects/ telegram/）不动。'))) return
+        savePath({ kind: 'root', to }, to || '~/.dsh')
+      }
+      const exportCfg = () => {
+        fetch('/memory-xfy/config-export').then((r) => r.json())
+          .then((d) => {
+            if (!d.ok) return setLayoutMsg(T('导出失败：') + (d.error || ''))
+            const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' })
+            const a = document.createElement('a')
+            a.href = URL.createObjectURL(blob)
+            a.download = 'memory-xfy-config-' + new Date().toISOString().slice(0, 10) + '.json'
+            a.click()
+            URL.revokeObjectURL(a.href)
+            setLayoutMsg(T('已导出：层定义 + 每层目录 + token 权限 + 同步地址/token'))
+          })
+          .catch((e) => setLayoutMsg(String(e)))
+      }
+      const importCfg = () => {
+        const inp = document.createElement('input')
+        inp.type = 'file'
+        inp.accept = 'application/json,.json'
+        inp.onchange = () => {
+          const f = inp.files && inp.files[0]
+          if (!f) return
+          f.text().then((txt) => {
+            let obj
+            try { obj = JSON.parse(txt) } catch { return setLayoutMsg(T('这个文件不是合法 JSON')) }
+            if (!obj || obj.kind !== 'dsh-memory-xfy/config') return setLayoutMsg(T('不是本插件导出的配置（缺 kind）'))
+            const n = ((obj.layers && obj.layers.layers) || []).length
+            if (!window.confirm(T('导入会覆盖现在的层定义和 token 权限，确定？\n\n配置里有 ') + n + T(' 层'))) return
+            setLayoutBusy(true); setLayoutMsg(T('导入中…'))
+            fetch('/memory-xfy/config-import', {
+              method: 'POST', headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ what: 'both', layers: obj.layers, plugin: obj.plugin }),
+            }).then((r) => r.json())
+              .then((d) => {
+                setLayoutBusy(false)
+                setLayoutMsg(d.ok ? T('导入完成：层定义 + 插件配置都换了（刷新页面生效）') : T('导入失败：') + (d.error || ''))
+                if (d.ok) loadLayout()
+              })
+              .catch((e) => { setLayoutBusy(false); setLayoutMsg(String(e)) })
+          })
+        }
+        inp.click()
+      }
+      const [remoteUrl, setRemoteUrl] = React.useState('')
+      const [remoteToken, setRemoteToken] = React.useState('')
+      const [syncMsg, setSyncMsg] = React.useState('')
+
+      const [remoteDiff, setRemoteDiff] = React.useState(null)
+
+      const [remoteMe, setRemoteMe] = React.useState(null)
+      const [remoteBusy, setRemoteBusy] = React.useState(false)
+      const [delConfirm, setDelConfirm] = React.useState(false)
+      const [acl, setAcl] = React.useState(null)
+      const [profiles, setProfiles] = React.useState([])
+      const [curTok, setCurTok] = React.useState('')
+      const [newName, setNewName] = React.useState('')
+
+      const [renaming, setRenaming] = React.useState(false)
+      const [renameDraft, setRenameDraft] = React.useState('')
+      const [selRows, setSelRows] = React.useState([])
       const [open, setOpen] = React.useState({})
       const [sel, setSel] = React.useState(null)
       const [draft, setDraft] = React.useState('')
@@ -471,7 +689,327 @@ window.__ModuleLoader__.load({
           .catch(() => setNotice(T('树加载失败')))
       }, [])
 
-      React.useEffect(() => { loadStats(); loadTree() }, [loadStats, loadTree])
+      const loadAcl = React.useCallback(() => {
+        fetch('/memory-xfy/config').then((r) => r.json())
+          .then((d) => {
+            if (!d.ok) return
+            setAcl((d.config && d.config.acl) || {})
+            setRemoteUrl((d.config && d.config.remoteUrl) || '')
+            setRemoteToken((d.config && d.config.remoteToken) || '')
+            const toks = ((d.serve && d.serve.tokens) || []).map((t2) => ({
+              token: t2.token, name: t2.name, layers: t2.layers || [],
+            }))
+            setProfiles(toks)
+
+            setCurTok((cur) => (toks.some((t2) => t2.token === cur) ? cur : (toks.length ? toks[0].token : '')))
+          })
+          .catch((e) => setNotice(T('读不到设置：') + String(e)))
+      }, [])
+
+      React.useEffect(() => { loadStats(); loadTree(); loadAcl(); loadFacets() }, [loadStats, loadTree, loadAcl, loadFacets])
+
+      const aclArr = (tok, bit) => ((acl && tok && acl[tok] && acl[tok][bit]) || [])
+
+      const relOf = (p) => String(p || '')
+        .replace(/^.*\/\.dsh\/memory\//, '')
+        .replace(/^.*\/\.dsh\//, '')
+      const coveredBy = (arr, path) => {
+        const r = relOf(path)
+        if (arr.includes('!' + r)) return false
+        if (arr.includes(r)) return true
+        return arr.some((sv) => sv.endsWith('/') && r.startsWith(sv))
+      }
+
+      const fileBits = (path) => ACL_BITS.slice(FILE_BIT_START).map((b) => coveredBy(aclArr(curTok, b.key), path))
+
+      const fileOwn = (path) => ACL_BITS.slice(FILE_BIT_START).map((b) => {
+        const arr = aclArr(curTok, b.key)
+        const r = relOf(path)
+        return arr.includes(r) || arr.includes('!' + r)
+      })
+
+      const rowBits = (files) => ACL_BITS.map((b) => {
+        const arr = aclArr(curTok, b.key)
+        const vals = files.map((f) => coveredBy(arr, f.path))
+        if (!vals.length) return false
+        return vals.every((v) => v === vals[0]) ? vals[0] : null
+      })
+
+      const dirPrefixesOf = (files) => {
+        const set = new Set()
+        for (const f of files) {
+          const p = relOf(f.path).split('/')
+          if (p.length >= 3 && p[0] === 'archived') set.add(p[0] + '/' + p[1] + '/')
+          else if (p.length >= 2) set.add(p[0] + '/')
+        }
+        return [...set]
+      }
+
+      const BTN_AT = { rules: 'none', bin: 'none', profiles: 'group', log: 'group' }
+      const btnAt = (layer) => BTN_AT[layer] || 'layer'
+
+      const toggleDirsBit = (dirs, files, i) => {
+        const b = ACL_BITS[i].key
+        const arr = aclArr(curTok, b)
+        const keys = dirs.map((d) => d.replace(/\/+$/, '') + '/')
+        const all = files.map((f) => relOf(f.path))
+        const onNow = keys.length > 0 && keys.every((k) => coveredBy(arr, k))
+
+        const rest = arr.filter((sv) => !keys.includes(sv) && !keys.includes(sv.replace(/^!/, ''))
+          && !all.includes(sv) && !all.includes(sv.replace(/^!/, '')))
+        saveAcl(setBitArr(curTok, b, onNow ? rest : [...rest, ...keys]))
+      }
+
+      const toggleDirBit = (dirRel, files, i) => {
+        const b = ACL_BITS[i].key
+        const arr = aclArr(curTok, b)
+        const key = String(dirRel).replace(/\/+$/, '') + '/'
+        const neg = '!' + key
+        const all = files.map((f) => relOf(f.path))
+        const rest = arr.filter((sv) => sv !== key && sv !== neg
+          && !all.includes(sv) && !all.includes(sv.replace(/^!/, '')))
+        const onNow = coveredBy(arr, key)
+
+        const parentOn = arr.some((sv) => !sv.startsWith('!') && sv.endsWith('/')
+          && sv !== key && key.startsWith(sv) && !arr.includes('!' + sv))
+        saveAcl(setBitArr(curTok, b, onNow ? (parentOn ? [...rest, neg] : rest) : [...rest, key]))
+      }
+      const saveAcl = (next) => {
+        setAcl(next)
+        fetch('/memory-xfy/config-save', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ acl: next }),
+        }).then((r) => r.json())
+          .then((d) => { if (!d.ok) setNotice(T('权限没保存上：') + (d.error || '')) })
+          .catch((e) => setNotice(T('权限没保存上：') + String(e)))
+      }
+      const setBitArr = (tok, bit, arr) => {
+        const cur = { ...(acl || {}) }
+        const one = { ...(cur[tok] || {}) }
+        one[bit] = arr
+        cur[tok] = one
+        return cur
+      }
+
+      const toggleFileBit = (layer, path, files, i) => {
+        const b = ACL_BITS[i].key
+        const arr = aclArr(curTok, b)
+        const rp = relOf(path)
+        const neg = '!' + rp
+        const dirHas = arr.some((sv) => sv.endsWith('/') && rp.startsWith(sv))
+        const nowOn = coveredBy(arr, path)
+        const rest = arr.filter((sv) => sv !== rp && sv !== neg)
+        saveAcl(setBitArr(curTok, b, nowOn
+          ? (dirHas ? [...rest, neg] : rest)
+          : (dirHas ? rest : [...rest, rp])))
+      }
+
+      const lastRow = React.useRef('')
+      const pickRow = (k, shift) => {
+        if (shift && lastRow.current) {
+          const keys = rowKeys()
+          const a = keys.indexOf(lastRow.current)
+          const b = keys.indexOf(k)
+          if (a >= 0 && b >= 0) {
+            const span = a < b ? keys.slice(a, b + 1) : keys.slice(b, a + 1)
+            setSelRows((cur) => [...new Set([...cur, ...span])])
+            return
+          }
+        }
+        lastRow.current = k
+        setSelRows((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))
+      }
+      const rowKeys = () => {
+        const ks = []
+        for (const L of (tree || [])) {
+          if (!L.files || !L.files.length) continue
+          ks.push('L:' + L.layer)
+          for (const F of L.files) ks.push('F:' + F.path)
+        }
+        return ks
+      }
+      const rowsToPaths = (rows) => {
+        const out = []
+        for (const k of rows) {
+          if (k.startsWith('L:')) out.push(k.slice(2) + '/')
+          else if (k.startsWith('F:')) out.push(relOf(k.slice(2)))
+        }
+        return out
+      }
+
+      const bulkBitOn = (picks, i) => {
+        const b = ACL_BITS[i].key
+        const cur = aclArr(curTok, b)
+        const allIn = picks.length > 0 && picks.every((p2) => cur.includes(p2) || coveredBy(cur, p2))
+
+        const rest = cur.filter((sv) => !picks.some((p2) => sv === p2 || sv === '!' + p2
+          || (sv.endsWith('/') && p2.startsWith(sv))))
+        saveAcl(setBitArr(curTok, b, allIn ? rest : [...rest, ...picks.filter((p2) => !cur.includes(p2))]))
+      }
+
+      const bulkBit = (i) => {
+        bulkBitOn(selRows.length
+          ? rowsToPaths(selRows)
+          : (tree || []).filter((L) => L.files && L.files.length).map((L) => L.layer + '/'), i)
+      }
+
+      const bitShot = (i, k, shift, plain) => {
+        const keys = shift ? rowKeys() : []
+        const a = shift && lastRow.current ? keys.indexOf(lastRow.current) : -1
+        const b = keys.indexOf(k)
+        if (a < 0 || b < 0) { lastRow.current = k; return plain() }
+        const span = a < b ? keys.slice(a, b + 1) : keys.slice(b, a + 1)
+        lastRow.current = k
+        setSelRows(span)
+        bulkBitOn(rowsToPaths(span), i)
+      }
+
+      const remoteCall = (payload) => fetch('/memory-xfy/remote', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then((r) => r.json())
+
+      React.useEffect(() => {
+        if (!remoteUrl || !remoteToken) return undefined
+        let alive = true
+        fetch('/memory-xfy/remote', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action: 'me', wantDiff: true }),
+        }).then((r) => r.json())
+          .then((d) => {
+            if (!alive || !d.ok) return
+            setRemoteMe(d.me)
+            setRemoteDiff(d.diff || null)
+          })
+          .catch(() => {})
+        return () => { alive = false }
+      }, [remoteUrl, remoteToken])
+
+      const saveRemote = () => {
+        const url = remoteUrl.trim(), tok = remoteToken.trim()
+        if (!url || !tok) return setSyncMsg(T('先填服务器网址和 token'))
+        setRemoteBusy(true)
+        fetch('/memory-xfy/config-save', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ remoteUrl: url, remoteToken: tok }),
+        }).then((r) => r.json())
+          .then((d) => {
+            if (!d.ok) throw new Error(d.error || T('保存失败'))
+            return remoteCall({ action: 'me', remoteUrl: url, remoteToken: tok, wantDiff: true })
+          })
+          .then((d) => {
+            if (!d.ok) { setRemoteMe(null); throw new Error(d.error || T('对面没回话')) }
+            setRemoteMe(d.me)
+            setRemoteDiff(d.diff || null)
+
+            fetch('/memory-xfy/config-save', {
+              method: 'POST', headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ remoteName: String(d.me.name || '') }),
+            }).catch(() => {})
+            setSyncMsg(T('连上了：') + (d.me.name || '?') + T('。权限见下（只有对方能改）'))
+          })
+          .catch((e) => { setRemoteMe(null); setSyncMsg(T('连不上：') + String(e && e.message || e)) })
+          .finally(() => setRemoteBusy(false))
+      }
+
+      const disconnectRemote = () => {
+        fetch('/memory-xfy/config-save', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ remoteUrl: '', remoteToken: '', remoteName: '' }),
+        }).then((r) => r.json())
+          .then((d) => {
+            if (!d.ok) { setSyncMsg(T('断开失败：') + (d.error || '')); return }
+
+            setRemoteMe(null); setRemoteDiff(null)
+            setSyncMsg(T('已断开同步 —— 现在是纯本地，已经同步下来的文件都留着'))
+          })
+          .catch((e) => setSyncMsg(T('断开失败：') + String(e)))
+      }
+
+      const doSync = () => {
+        setRemoteBusy(true)
+        let baseline = {}
+        try { baseline = JSON.parse(localStorage.getItem('memSyncBaseline') || '{}') || {} } catch (e) { baseline = {} }
+        remoteCall({ action: 'sync', payload: { protocol: 1, baseline, changes: [] } })
+          .then((d) => {
+            if (!d.ok) throw new Error(d.error || T('同步失败'))
+            const keep = {}
+            for (const f of (d.files || [])) keep[f.path] = f.hash
+            try { localStorage.setItem('memSyncBaseline', JSON.stringify(keep)) } catch (e) {  }
+            const n = (d.files || []).length
+            const nc = (d.conflicts || []).length
+            setSyncMsg(T('同步完成：拉回 ') + n + T(' 篇') +
+              (d.applied != null ? T('（落地 ') + d.applied + T('）') : '') +
+              (nc ? T('，冲突 ') + nc + (d.savedConflicts ? T('（服务器那份另存 ') + d.savedConflicts + T(' 份 .conflict- 副本，本地这稿没动）') : T('')) : '') +
+              ((d.rejected || []).length ? T('，被拒 ') + d.rejected.length : ''))
+            loadAcl()
+          })
+          .catch((e) => setSyncMsg(T('同步失败：') + String(e && e.message || e)))
+          .finally(() => setRemoteBusy(false))
+      }
+
+      const delTok = () => {
+        setDelConfirm(!delConfirm)
+        setSyncMsg(delConfirm ? '' : T('已标记删除 —— 点「保存」才真删'))
+      }
+      const doDelTok = () => {
+        setDelConfirm(false)
+        fetch('/memory-xfy/token-del', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ token: curTok }),
+        }).then((r) => r.json())
+          .then((d) => {
+            if (!d.ok) { setSyncMsg(T('删除失败：') + (d.error || '')); return }
+            setSyncMsg(T('已删掉 token「') + (d.removed || '') + T('」—— ') +
+              ((d.restart && d.restart.restarted) ? T('mem-serve 已自动重启，对方立刻连不上') : T('重启 mem-serve 才生效')))
+
+            const idx = profiles.findIndex((p2) => p2.token === curTok)
+            setCurTok(idx > 0 ? profiles[idx - 1].token : '')
+            setRenaming(false)
+            loadAcl()
+          })
+          .catch((e) => setSyncMsg(T('删除失败：') + String(e)))
+      }
+
+      const copyTok = () => {
+        try {
+          navigator.clipboard.writeText(curTok)
+          setSyncMsg(T('token 已复制'))
+        } catch (e) {
+          setSyncMsg(T('复制失败，手动选中复制：') + String(e))
+        }
+      }
+
+      const newProfile = () => {
+        fetch('/memory-xfy/token-new', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: '' }),
+        }).then((r) => r.json())
+          .then((d) => {
+            if (!d.ok) { setNotice(T('新建失败：') + (d.error || '')); return }
+            setNotice(T('已新建 profile「') + (d.name || '') + T('」—— ') +
+              ((d.restart && d.restart.restarted) ? T('mem-serve 已自动重启，立即可用') : T('重启 mem-serve 后才对外生效')))
+            loadAcl()
+            setCurTok(d.token)
+          })
+          .catch((e) => setNotice(T('新建失败：') + String(e)))
+      }
+
+      const doRename = () => {
+        const nm = String(renameDraft || '').trim()
+        if (!curTok || !nm) { setRenaming(false); return }
+        fetch('/memory-xfy/token-new', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ token: curTok, name: nm }),
+        }).then((r) => r.json())
+          .then((d) => {
+            if (!d.ok) { setNotice(T('改名失败：') + (d.error || '')); return }
+            setRenaming(false)
+            setNotice(T('已改名为「') + (d.name || '') + T('」'))
+            loadAcl()
+          })
+          .catch((e) => setNotice(T('改名失败：') + String(e)))
+      }
 
       React.useEffect(() => {
         if (!notice) return
@@ -736,6 +1274,16 @@ window.__ModuleLoader__.load({
           padding: '7px 13px', borderRadius: 8, border: '1px solid ' + LINE,
           background: 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 13,
         },
+
+        btn1: {
+          padding: '7px 20px', borderRadius: 8, border: '1px solid ' + LINE,
+          background: 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 13,
+        },
+        btn2: {
+          padding: '4px 12px', borderRadius: 7, border: '1px solid ' + LINE,
+          background: 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', fontSize: 12,
+          lineHeight: 1.5,
+        },
         hit: {
           padding: '7px 10px', borderRadius: 8, border: '1px solid ' + LINE,
           fontSize: 12, lineHeight: 1.5, wordBreak: 'break-word', cursor: 'pointer',
@@ -800,7 +1348,7 @@ window.__ModuleLoader__.load({
         setFCats([]); setFTags([])
         setFMinImp(''); setFMaxImp('')
         setFCAfter(''); setFCBefore(''); setFMAfter(''); setFMBefore('')
-        loadStats(); loadTree()
+        loadStats(); loadTree(); loadFacets()
       }
       const dirty = sel && draft !== orig
       const baseName = (p) => String(p).split('/').slice(-1)[0]
@@ -826,6 +1374,50 @@ window.__ModuleLoader__.load({
           : T('热区：近期流水 + 全部结论层。默认检索范围。'),
       }, z === 'cold' ? T('冷') : T('热'))
 
+      const syncStateOf = (path) => {
+        if (!remoteUrl || !remoteToken) return 'local'
+        const can = (remoteMe && remoteMe.can) || null
+        if (!can) return 'local'
+        if (!coveredBy(can.read || [], path)) return 'local'
+        return coveredBy(can.put || [], path) ? 'sync' : 'shared'
+      }
+      const SYNC_STYLE = {
+        local: { label: '本地', bg: 'rgba(120,120,120,.12)', fg: '#6b7280', bd: 'rgba(120,120,120,.42)' },
+        shared: { label: '分享', bg: 'rgba(190,140,30,.15)', fg: '#a16207', bd: 'rgba(190,140,30,.5)' },
+        sync: { label: '同步', bg: 'rgba(30,150,110,.15)', fg: '#0f766e', bd: 'rgba(30,150,110,.5)' },
+      }
+      const SyncPill = (state, key) => {
+        const st = SYNC_STYLE[state] || SYNC_STYLE.local
+        return h('span', {
+          key,
+          style: {
+            padding: '1px 8px', borderRadius: 10, fontSize: 10.5, whiteSpace: 'nowrap',
+            border: '1px solid ' + st.bd, background: st.bg, color: st.fg,
+          },
+          title: state === 'local' ? T('只有本机有这篇（没连远端，或远端权限没覆盖到它）')
+            : state === 'shared' ? T('远端能读这篇、但不能改 —— 以远端为准，本地改动同步时会被覆盖')
+              : T('双向同步：两边都能改，冲突走三方合并，合不掉的进 conflict/'),
+        }, T(st.label))
+      }
+
+      const PermPills = (path, key) => h('span', {
+        key, style: { display: 'inline-flex', gap: 2, alignItems: 'center' },
+      }, ACL_BITS.slice(FILE_BIT_START).map((b) => {
+        const on = coveredBy(aclArr(curTok, b.key), path)
+        return h('span', {
+          key: b.key,
+          title: T(b.label),
+          style: {
+            width: 14, height: 14, lineHeight: '13px', textAlign: 'center',
+            fontSize: 9.5, borderRadius: 3, cursor: 'default', userSelect: 'none',
+            fontWeight: on ? 600 : 400,
+            color: on ? '#ffffff' : '#9ca3af',
+            background: on ? '#9ca3af' : '#f3f4f6',
+            border: on ? '1px solid transparent' : '1px solid #e5e7eb',
+          },
+        }, T(b.ch))
+      }))
+
       const hitPathSet = hits === null ? null
         : new Set(hits.map((x) => x.full || x.path).filter(Boolean))
       const viewTree = !tree ? tree
@@ -850,14 +1442,24 @@ window.__ModuleLoader__.load({
       } else {
         for (const L of viewTree) {
           const lk = 'L:' + L.layer
-          const lopen = open[lk] !== false
+          const lopen = (cfgTab === 'share') ? true : open[lk] !== false
           treeRows.push(h(Node, {
-            key: lk, depth: 0, label: L.layer, meta: L.files.length + T(' 个文件'),
-            open: lopen, onClick: () => toggle(lk),
-            onFolderClick: L.dir ? () => revealInFinder(L.dir) : undefined,
+            key: lk, depth: 0, label: L.layer,
+
+            meta: (cfgTab === 'share') ? undefined : L.files.length + T(' 个文件'),
+            open: lopen,
+            active: (cfgTab === 'share') && selRows.includes(lk),
+            onClick: (e) => ((cfgTab === 'share') ? pickRow(lk, e.shiftKey) : toggle(lk)),
+            onFolderClick: (cfgTab === 'share') ? undefined : (L.dir ? () => revealInFinder(L.dir) : undefined),
+
+            aclBits: ((cfgTab === 'share') && curTok && btnAt(L.layer) === 'layer')
+              ? rowBits(L.files) : undefined,
+            onAclBit: btnAt(L.layer) === 'layer'
+              ? (i, shift) => bitShot(i, lk, shift, () => toggleDirsBit(dirPrefixesOf(L.files), L.files, i))
+              : undefined,
           }))
           if (!lopen) continue
-          const flat = !!L.flat
+          const flat = (cfgTab === 'share') ? false : !!L.flat
           const buckets = new Map()
           for (const F of L.files) {
             const g = F.group || ''
@@ -868,13 +1470,26 @@ window.__ModuleLoader__.load({
             let fdepth = 1
             let edepth = 2
             if (g) {
-              const gk = 'G:' + L.layer + ':' + g
-              const gopen = open[gk] !== false
               const gdir = (files.find((f) => f.groupDir) || {}).groupDir || ''
+
+              const gRel = gdir ? relOf(gdir) : ''
+
+              const gk = 'G:' + L.layer + ':' + (gRel || g)
+              const gopen = (cfgTab === 'share') ? true : open[gk] !== false
               treeRows.push(h(Node, {
-                key: gk, depth: 1, label: g, meta: files.length + T(' 个'),
-                open: gopen, onClick: () => toggle(gk),
-                onFolderClick: gdir ? () => revealInFinder(gdir) : undefined,
+                key: gk, depth: 1,
+
+                label: g + (files.every((f) => f.zone === 'cold') ? ' · ' + T('冷') : ''),
+                meta: (cfgTab === 'share') ? undefined : files.length + T(' 个'),
+                open: gopen,
+                active: (cfgTab === 'share') && selRows.includes(gk),
+                onClick: (e) => ((cfgTab === 'share') ? pickRow(gk, e.shiftKey) : toggle(gk)),
+                onFolderClick: (cfgTab === 'share') ? undefined : (gdir ? () => revealInFinder(gdir) : undefined),
+
+                aclBits: ((cfgTab === 'share') && curTok && btnAt(L.layer) === 'group' && gRel)
+                  ? rowBits(files) : undefined,
+                onAclBit: ((cfgTab === 'share') && curTok && btnAt(L.layer) === 'group' && gRel)
+                  ? (i) => toggleDirBit(gRel, files, i) : undefined,
               }))
               if (!gopen) continue
               fdepth = 2
@@ -886,16 +1501,24 @@ window.__ModuleLoader__.load({
               if (!flat) {
                 treeRows.push(h(Node, {
                   key: fk, depth: fdepth, label: F.label || F.name,
-                  meta: F.entries.length > 1
+                  meta: (cfgTab === 'share') ? undefined : (F.entries.length > 1
                     ? F.entries.length + T(' 条')
-                    : String(F.chars || 0),
-                  open: fopen, onClick: () => toggle(fk),
+                    : String(F.chars || 0)),
+                  open: fopen,
+                  onClick: (e) => ((cfgTab === 'share') ? pickRow(fk, e.shiftKey) : toggle(fk)),
                   onLabelClick: () => openFile(F.path),
                   dim: F.zone === 'cold' && fZone.length > 1,
+                  active: (cfgTab === 'share') && selRows.includes(fk),
+                  meta: (cfgTab === 'share') ? undefined : undefined,
                   title: (F.zone === 'cold' ? T('【冷区归档】') : '') + F.path + T('（点名字看整篇，点三角展开）'),
+                  aclBits: (cfgTab === 'share') && curTok ? fileBits(F.path) : undefined,
+                  aclOwn: (cfgTab === 'share') && curTok ? fileOwn(F.path) : undefined,
+                  bitStart: FILE_BIT_START,
+                  onAclBit: (i, shift) => bitShot(i, fk, shift, () => toggleFileBit(L.layer, F.path, L.files, i)),
                 }))
                 if (!fopen) continue
               }
+              if ((cfgTab === 'share')) continue
               for (const E of F.entries) {
                 treeRows.push(h(Node, {
                   key: fk + '#' + E.index, depth: flat ? 1 : edepth, leaf: true,
@@ -929,6 +1552,8 @@ window.__ModuleLoader__.load({
             + T('- `**粗体**`、行内代码、列表、引用、代码块都会正常显示\n')
             + T('- 长文档可以直接往下滚，不用挤在小窗里'))))
       } else if (sel.mode === 'file') {
+
+        const readonlyHere = syncStateOf(sel.path) === 'shared'
         editor = [
           h('div', { key: 'head', style: { display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', fontSize: 12.5 } },
             h('span', {
@@ -939,6 +1564,9 @@ window.__ModuleLoader__.load({
             h('span', { style: { opacity: 0.4 } }, String(draft.length)),
             h(ScoreBadge, { key: 'sc', value: sel.importance }),
             ZonePill(zoneOf(sel.path), 'zn'),
+            SyncPill(syncStateOf(sel.path), 'sy'),
+
+            syncStateOf(sel.path) === 'sync' ? PermPills(sel.path, 'perm') : null,
             h('span', {
               key: 'p', style: {
                 flex: 1, minWidth: 0, opacity: 0.42, fontSize: 11.5,
@@ -959,7 +1587,11 @@ window.__ModuleLoader__.load({
               onClick: () => openWithDefault(sel.path),
             }, T('打开')),
             h('button', {
-              key: 'edit', style: { ...S.button, padding: '4px 11px', fontSize: 12 },
+              key: 'edit',
+              style: { ...S.button, padding: '4px 11px', fontSize: 12, opacity: readonlyHere ? 0.5 : 1 },
+              disabled: readonlyHere,
+
+              title: readonlyHere ? T('只读授权：这篇以远端为准，本地改了同步时会被远端覆盖') : '',
               onClick: () => setPreview(!preview),
             }, preview ? T('编辑') : T('预览')),
             dirty ? h('span', { key: 'd', style: { color: '#e8a33d' } }, T('● 未保存')) : null,
@@ -1061,6 +1693,342 @@ window.__ModuleLoader__.load({
       return h('div', { style: S.box },
         h('div', { style: { fontSize: 13, opacity: 0.72, lineHeight: 1.6 } },
           T('记忆不进上下文，只被检索。这里是全部记忆的全貌——点开就能读，也能改，改完立即生效。')),
+        cfgTab ? h('div', {
+          style: {
+            display: 'flex', flexDirection: 'column', gap: 8,
+            padding: '8px 10px', border: '1px solid ' + LINE, borderRadius: 10,
+            background: 'rgba(99,102,241,.07)',
+          },
+        },
+
+          cfgTab === 'menu'
+            ? h('div', { style: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' } },
+                h('button', {
+                  style: { ...S.btn1, background: 'rgba(99,102,241,.18)' },
+                  onClick: () => { setCfgTab('share'); setSelRows([]); loadAcl() },
+                }, T('网络分享（生成 token）')),
+                h('button', {
+                  style: { ...S.btn1 },
+                  onClick: () => { setCfgTab('sync'); setSelRows([]) },
+                }, T('记忆同步（导入 token）')),
+                h('button', {
+                  style: { ...S.btn1 },
+                  onClick: () => { setCfgTab('layout'); setSelRows([]); loadLayout() },
+                }, T('存放位置')),
+
+                h('button', { style: { ...S.btn1, opacity: 0.85 }, disabled: layoutBusy, onClick: exportCfg },
+                  T('导出配置')),
+                h('button', { style: { ...S.btn1, opacity: 0.85 }, disabled: layoutBusy, onClick: importCfg },
+                  T('导入配置')),
+                h('button', {
+                  style: { ...S.btn1, marginLeft: 'auto', opacity: 0.75 },
+                  onClick: () => { setCfgTab(''); setSelRows([]) },
+                }, T('关闭')),
+              )
+            : h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
+                h('button', {
+                  style: S.btn2,
+                  onClick: () => { setCfgTab('menu'); setSelRows([]) },
+                }, T('← 返回')),
+                h('strong', { style: { fontSize: 12.5 } },
+                  cfgTab === 'share' ? T('网络分享（生成 token）')
+                    : cfgTab === 'layout' ? T('存放位置')
+                      : T('记忆同步（导入 token）')),
+                syncMsg ? h('span', { style: { fontSize: 11.5, opacity: 0.75 } }, syncMsg) : null,
+                h('button', {
+                  style: { ...S.btn2, marginLeft: 'auto', opacity: 0.8 },
+                  onClick: () => { setCfgTab(''); setSelRows([]) },
+                }, T('关闭')),
+              ),
+
+          cfgTab === 'layout'
+            ? h(React.Fragment, null,
+              h('div', { style: { fontSize: 12, opacity: 0.72, lineHeight: 1.7 } },
+                renderMd(
+                  T('所有记忆文件都在**同一个主路径**下面，不分散。搬家是**真搬**，不是软链。\n\n')
+                  + T('- 主路径只有一份，可以指到 `.dsh` 之外；改它会连 `mem.db` 一起整体搬\n')
+                  + T('- 细分路径一律相对主路径（写 `docs`，不是 `/Users/…/docs`）\n')
+                  + T('- 冷区是热区结构的镜像：`docs` ↔ `archived/docs`、`logs/changelog` ↔ `archived/logs/changelog`\n')
+                  + T('- `rules` 跟着 `AGENTS.md`、`skills` 跟着技能目录，这两层不能改'))),
+              layoutMsg ? h('div', { style: { fontSize: 12, opacity: 0.85 } }, layoutMsg) : null,
+              !layoutData
+                ? h('div', { style: { opacity: 0.6, fontSize: 12 } }, T('读取中…'))
+                : h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
+
+                    h('div', {
+                      style: {
+                        display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 12,
+                        padding: '6px 6px 8px', borderBottom: '1px solid ' + LINE, marginBottom: 4,
+                      },
+                    },
+                      h('span', { style: { width: 70, fontWeight: 600 } }, T('主路径')),
+                      h('span', { style: { flex: 1, minWidth: 0, display: 'flex', gap: 6, alignItems: 'baseline' } },
+                        h('code', { title: layoutData.root.raw || T('（默认 ~/.dsh）'),
+                          style: { fontSize: 11.5, opacity: 0.85 } }, tilde(layoutData.root.abs)),
+                        h('span', { style: { fontSize: 10.5, opacity: 0.5 } }, T('（含 mem.db）'))),
+                      h('button', {
+                        style: { ...S.btn2, fontSize: 11, padding: '2px 8px' },
+                        disabled: layoutBusy,
+                        onClick: () => editRoot(layoutData.root.raw, layoutData.root.abs,
+                          layoutRows.reduce((a, r) => a + r.files, 0),
+                          layoutRows.reduce((a, r) => a + r.bytes, 0)),
+                      }, T('改位置'))),
+                    h('div', {
+                      style: {
+                        display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 12,
+                        padding: '0 6px 8px', borderBottom: '1px solid ' + LINE, marginBottom: 4,
+                      },
+                    },
+                      h('span', { style: { width: 70, fontWeight: 600 } }, T('冷区')),
+                      h('span', { style: { flex: 1, minWidth: 0, display: 'flex', gap: 6, alignItems: 'baseline' } },
+
+                        h('code', { title: layoutData.cold.abs,
+                          style: { fontSize: 11.5, opacity: 0.85 } }, layoutData.cold.raw || 'archived'),
+                        h('span', { style: { fontSize: 10.5, opacity: 0.5 } },
+                          T('（一份，按各层细分路径镜像：') + layoutData.cold.raw + '/docs、' + layoutData.cold.raw + '/logs/changelog …）')),
+                      h('button', {
+                        style: { ...S.btn2, fontSize: 11, padding: '2px 8px' },
+                        disabled: layoutBusy,
+                        onClick: () => editCold(layoutData.cold.raw,
+                          layoutRows.reduce((a, r) => a + r.files, 0),
+                          layoutRows.reduce((a, r) => a + r.bytes, 0)),
+                      }, T('改位置'))),
+                    ...layoutRows.map((r, i) => {
+
+                      const fixedLayer = r.layer === 'rules' || r.layer === 'skills'
+                      return h('div', {
+                        key: r.layer,
+                        style: {
+                          display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 12,
+                          padding: '4px 6px', borderRadius: 6,
+                          background: (i % 2) ? 'transparent' : 'rgba(128,128,128,.06)',
+                        },
+                      },
+                        h('span', { style: { width: 70, fontWeight: 600 } }, r.layer),
+                        h('span', { style: { width: 86, opacity: 0.7 } }, r.files + T(' 个文件')),
+                        h('span', { style: { width: 72, opacity: 0.7 } }, fmtBytes(r.bytes)),
+                        h('span', {
+                          style: {
+                            flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
+                            gap: 1, alignItems: 'flex-start',
+                          },
+                        },
+
+                          ...((r.dirs && r.dirs.length)
+                            ? r.dirs.map((d, k) => h('span', {
+                                key: d.raw,
+                                style: { display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: '100%' },
+                              },
+                                h('code', { title: d.abs,
+                                  style: {
+                                    fontSize: 11.5, opacity: 0.85, maxWidth: '100%',
+                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                  } }, d.raw),
+                                fixedLayer ? null : h('button', {
+                                  title: T('改成别的子路径（真搬）'),
+                                  style: { ...S.btn2, fontSize: 10, padding: '0 5px', opacity: 0.75 },
+                                  disabled: layoutBusy,
+                                  onClick: () => editDir(r.layer, k, d.raw, r.files, r.bytes),
+                                }, T('改位置'))))
+                            : []),
+                          (!(r.dirs || []).length && (r.fixedFiles || []).length)
+                            ? h('span', { style: { fontSize: 11, opacity: 0.55 } },
+                                T('直接放在主路径根下（文件白名单）'))
+                            : null),
+                        fixedLayer
+                          ? h('span', { style: { fontSize: 11, opacity: 0.45, width: 48, textAlign: 'right' } },
+                              T('固定'))
+                          : null,
+                      )
+                    })),
+              h('div', { style: { fontSize: 11, opacity: 0.55, marginTop: 2 } },
+                T('导出包含：层定义 + 每层目录 + token 权限 + 同步地址/token')),
+            )
+            : null,
+          cfgTab === 'share'
+            ? h(React.Fragment, null,
+              h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
+
+                curTok
+                  ? h('code', {
+                      onClick: copyTok,
+                      title: T('点一下复制这个 token'),
+                      style: {
+                        fontSize: 11, fontFamily: MONO, padding: '2px 7px', borderRadius: 6,
+                        border: '1px solid ' + LINE, cursor: 'pointer', userSelect: 'all',
+                        wordBreak: 'break-all', opacity: 0.9,
+                        textDecoration: delConfirm ? 'line-through' : undefined,
+                        color: delConfirm ? '#d9534f' : 'inherit',
+                      },
+                    }, curTok)
+
+                  : (profiles.length === 0
+                      ? h('span', { style: { fontSize: 12, opacity: 0.55 } }, T('还没有 token，点 ＋ 新建'))
+                      : null),
+
+                h('select', {
+                  value: curTok, onChange: (e) => { setCurTok(e.target.value); setSelRows([]); setDelConfirm(false) },
+                  title: T('选一个 token（每个 token 就是一套权限）'),
+                  style: {
+                    padding: '3px 6px', borderRadius: 6, border: '1px solid ' + LINE,
+                    background: 'Canvas', color: 'CanvasText', font: 'inherit', fontSize: 12,
+                  },
+                }, [h('option', { key: '', value: '' }, T('选一个 token…'))]
+                  .concat(profiles.map((p2) => h('option', { key: p2.token, value: p2.token },
+                    p2.name || p2.token.slice(0, 8))))),
+
+                (curTok && !renaming)
+                  ? h('button', {
+                      style: S.btn2,
+                      title: T('给这个 profile 改个名字（token 值不变）'),
+                      onClick: () => {
+                        const p2 = profiles.find((x) => x.token === curTok)
+                        setRenameDraft((p2 && p2.name) || '')
+                        setRenaming(true)
+                      },
+                    }, T('改名'))
+                  : null,
+                renaming
+                  ? h(React.Fragment, null,
+                      h('input', {
+                        value: renameDraft, autoFocus: true,
+                        placeholder: T('新名字'),
+                        onChange: (e) => setRenameDraft(e.target.value),
+                        onKeyDown: (e) => {
+                          if (e.key === 'Enter') doRename()
+                          else if (e.key === 'Escape') setRenaming(false)
+                        },
+                        style: {
+                          padding: '4px 8px', borderRadius: 6, border: '1px solid ' + LINE,
+                          background: 'transparent', color: 'inherit', font: 'inherit',
+                          fontSize: 12, width: 150,
+                        },
+                      }),
+                      h('button', { style: S.btn2, onClick: doRename }, T('确定')),
+                      h('button', { style: S.btn2, onClick: () => setRenaming(false) }, T('取消')))
+                  : null,
+                h('button', {
+                  style: S.btn2,
+                  title: T('新建 token'),
+                  onClick: newProfile,
+                }, '＋'),
+                h('button', {
+                  style: {
+                    ...S.btn2,
+                    borderColor: delConfirm ? '#d9534f' : LINE,
+                    color: delConfirm ? '#d9534f' : 'inherit',
+                  },
+                  title: T('标记删除这个 token'),
+                  disabled: !curTok,
+                  onClick: delTok,
+                }, '×'),
+                delConfirm ? h('button', {
+                  style: { ...S.btn2, borderColor: '#d9534f', color: '#d9534f' },
+                  title: T('真的删掉（删完自动重启 mem-serve，立刻失效）'),
+                  onClick: doDelTok,
+                }, T('保存')) : null,
+                h('span', { style: { width: 1, height: 16, background: LINE } }),
+                h('span', { style: { marginLeft: 'auto', fontSize: 12, opacity: 0.7 } }, selRows.length
+                  ? T('给选中的 ') + selRows.length + T(' 行')
+                  : T('给全部')),
+                ACL_BITS.map((b, i2) => h('button', {
+                  key: b.key,
+                  style: S.btn2,
+                  title: T(b.label) + T('（点一下：全部给 / 全部收回）'),
+
+                  onClick: () => bulkBit(i2),
+                  disabled: !curTok || (b.key === 'add' && selRows.length > 0 && selRows.every((k) => k.startsWith('F:'))),
+                }, T(b.ch))),
+                h('button', {
+                  style: { ...S.btn2, opacity: 0.85 },
+                  onClick: () => setSelRows(selRows.length ? [] : rowKeys()),
+                }, selRows.length ? T('清空选择') : T('全选')),
+              ),
+
+              selRows.length
+                ? h('div', { style: { fontSize: 12, opacity: 0.72, lineHeight: 1.6 } },
+                    T('已选 ') + selRows.length + T(' 行（shift 点一行可整段选；shift 点方框 = 整段打这一位）'))
+                : null,
+              )
+            : null,
+          cfgTab === 'sync'
+            ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+                h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
+                  h('span', { style: { fontSize: 12, opacity: 0.7 } }, T('服务器')),
+                  h('input', {
+                    value: remoteUrl, placeholder: 'http://192.168.39.39:8765',
+                    onChange: (e) => setRemoteUrl(e.target.value),
+                    style: {
+                      padding: '4px 8px', borderRadius: 6, border: '1px solid ' + LINE,
+                      background: 'transparent', color: 'inherit', font: 'inherit',
+                      fontSize: 12, width: 220,
+                    },
+                  }),
+                  h('span', { style: { fontSize: 12, opacity: 0.7 } }, 'token'),
+                  h('input', {
+                    value: remoteToken, placeholder: T('主服务器给你的 token'),
+                    onChange: (e) => setRemoteToken(e.target.value),
+                    style: {
+                      padding: '4px 8px', borderRadius: 6, border: '1px solid ' + LINE,
+                      background: 'transparent', color: 'inherit', font: 'inherit',
+                      fontSize: 12, width: 260, fontFamily: MONO,
+                    },
+                  }),
+                  h('button', { style: { ...S.button, fontSize: 12, padding: '3px 12px', opacity: remoteBusy ? 0.6 : 1 },
+                    onClick: saveRemote, disabled: remoteBusy },
+                    remoteBusy ? T('连接中…') : T('保存并连接')),
+                  h('button', { style: { ...S.btn2, opacity: (remoteBusy || !remoteMe) ? 0.45 : 1 },
+                    onClick: doSync, disabled: remoteBusy || !remoteMe, title: T('先「保存并连接」拿到权限再同步') },
+                    T('立即同步')),
+
+                  h('button', {
+                    style: { ...S.btn2, marginLeft: 'auto', opacity: 0.85 },
+                    title: T('清掉服务器和 token，回到纯本地（已经同步下来的文件都留着，不会删）'),
+                    onClick: disconnectRemote, disabled: remoteBusy,
+                  }, T('断开同步')),
+                ),
+
+                remoteMe
+                  ? h('div', { style: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', fontSize: 12 } },
+                      h('span', { style: { opacity: 0.75 } }, T('对方给你：') + (remoteMe.name || '?')),
+                      ...ACL_BITS.map((b) => {
+                        const arr = (remoteMe.can && remoteMe.can[b.key]) || []
+                        const has = arr.length > 0
+                        return h('span', {
+                          key: b.key,
+                          title: has ? (arr.length + T(' 条路径：') + arr.slice(0, 3).join(' · ')) : T('没有这一位'),
+                          style: { opacity: has ? 1 : 0.35, fontFamily: MONO },
+                        }, T(b.ch) + (has ? ' ✓' : ' ✗'))
+                      }),
+                      remoteMe.writeTo
+                        ? h('span', { style: { opacity: 0.6 } }, T('写落点 ') + remoteMe.writeTo + '/')
+                        : null,
+                    )
+                  : null,
+
+                remoteDiff
+                  ? h('div', { style: { fontSize: 12, lineHeight: 1.6, opacity: 0.9 } },
+                      T('跟对方比：') + remoteDiff.same + T(' 篇一样 · ') +
+                      remoteDiff.onlyRemote + T(' 篇你这里没有 · ') +
+                      remoteDiff.differ + T(' 篇内容不同 · ') +
+                      remoteDiff.onlyLocal + T(' 篇你这边多出来'),
+                      remoteDiff.sampleRemote && remoteDiff.sampleRemote.length
+                        ? h('div', { style: { fontSize: 11.5, opacity: 0.6, fontFamily: MONO, marginTop: 2 } },
+                            T('缺的：') + remoteDiff.sampleRemote.slice(0, 3).join(' · ') +
+                            (remoteDiff.sampleRemote.length > 3 ? ' …' : ''))
+                        : null,
+                      remoteDiff.sampleDiffer && remoteDiff.sampleDiffer.length
+                        ? h('div', { style: { fontSize: 11.5, opacity: 0.6, fontFamily: MONO, marginTop: 2 } },
+                            T('不同的：') + remoteDiff.sampleDiffer.slice(0, 3).join(' · ') +
+                            (remoteDiff.sampleDiffer.length > 3 ? ' …' : ''))
+                        : null)
+                  : null,
+                h('div', { style: { fontSize: 11.5, opacity: 0.6, lineHeight: 1.5 } },
+                  T('权限全由主服务器给，这边只能看不能改；同步是整份覆盖本地对应层级。')),
+                syncMsg ? h('div', { style: { fontSize: 12, opacity: 0.85 } }, syncMsg) : null,
+              )
+            : null,
+        ) : null,
         h('div', { style: S.row },
           h('span', { style: S.stat }, T('文件 '), stats && stats.ok ? stats.files : '—'),
           h('span', { style: S.stat }, T('片段 '), stats && stats.ok ? stats.chunks : '—'),
@@ -1069,6 +2037,11 @@ window.__ModuleLoader__.load({
             : h('span', { style: { fontSize: 12, opacity: 0.55 } },
                 stats ? stats.error : T('加载中…')),
           h('button', { style: { ...S.button, fontSize: 12, opacity: 0.7 }, onClick: resetAll, title: T('恢复初始条件：清空搜索与筛选、层回到「全部层」、只看热区') }, T('刷新')),
+          h('button', {
+            style: { ...S.button, fontSize: 12, opacity: (cfgTab === 'share') ? 1 : 0.7, padding: '4px 9px' },
+            title: T('设置：哪个 profile 能读 / 增 / 改 / 删哪些记忆'),
+            onClick: () => { setCfgTab(cfgTab ? '' : 'menu'); setSelRows([]); if (!cfgTab) loadAcl() },
+          }, '⚙'),
         ),
         h('div', { style: S.row },
           h('input', {
@@ -1088,7 +2061,8 @@ window.__ModuleLoader__.load({
             style: { fontSize: 11.5, flex: '0 0 auto', opacity: 0.75, whiteSpace: 'nowrap' },
             title: T('左树已同步只显示命中的文件；点「刷新」恢复初始条件'),
           }, hits.length
-            ? T('命中 ') + hits.length + T(' 条') + (total > hits.length ? T(' / 共 ') + total : '')
+            ? T('命中 ') + hits.length + T(' 段') + ' · ' + (hitPathSet ? hitPathSet.size : 0) + T(' 个文件')
+              + (total > hits.length ? T(' / 共 ') + total + T(' 段') : '')
             : T('无命中')),
           h('button', { style: S.button, onClick: () => doSearch(), disabled: busy }, busy ? '…' : T('检索')),
         ),
@@ -1102,7 +2076,7 @@ window.__ModuleLoader__.load({
           }),
           h(MultiSelect, {
             allLabel: T('全部分类'), value: fCats, onChange: setFCats,
-            options: [T('技能'), T('DSH本体'), T('桌面'), T('社交'), T('借鉴'), T('循环'), T('上下文')],
+            options: catOptions, onOpen: loadFacets,
           }),
           h('div', { key: 'grp-i', style: DT_GRP },
             h('span', { style: DT_LABEL }, T('重要')),
@@ -1146,7 +2120,8 @@ window.__ModuleLoader__.load({
                 color: 'inherit', fontSize: 11.5, padding: '2px 2px',
               },
               onChange: (e) => { setTagInput(e.target.value); setTagOpen(true) },
-              onFocus: () => setTagOpen(true),
+
+              onFocus: () => { setTagOpen(true); loadFacets() },
               onBlur: () => setTimeout(() => setTagOpen(false), 160),
               onKeyDown: (e) => {
                 if (e.key === 'Enter') {
@@ -1184,11 +2159,16 @@ window.__ModuleLoader__.load({
                 },
                 onMouseDown: (e) => e.preventDefault(),
                 onClick: () => { setFTags([...fTags, o.tag]); setTagInput(''); setTagOpen(false) },
-              }, h('span', null, o.tag), h('span', { style: { opacity: 0.45 } }, o.n))),
+              },
+                h('span', null, o.tag),
+                h('span', {
+                  style: { opacity: 0.45 },
+                  title: (o.hot || o.cold) ? T('热 ') + (o.hot || 0) + T(' · 冷 ') + (o.cold || 0) : '',
+                }, o.n))),
               rest > 0 ? h('div', {
                 key: '__rest',
                 style: { padding: '4px 9px', fontSize: 11, opacity: 0.5, borderTop: '1px solid ' + LINE },
-              }, '还有 ' + rest + ' 个 · 继续输入缩小范围') : null)
+              }, T('还有 ') + rest + T(' 个 · 继续输入缩小范围')) : null)
             })() : null,
           ),
           ),
@@ -1264,7 +2244,9 @@ window.__ModuleLoader__.load({
                     onClick: () => setHitsCollapsed(false),
                   }, T('← 返回结果列表（') + hits.length + T(' 条') + (total > hits.length ? T(' · 共 ') + total : '') + '）')
                 : h(React.Fragment, null,
-                    h('span', null, T('命中 ') + hits.length + T(' 条') + (total > hits.length ? T('（共 ') + total + T(' 条，只显示前 ') + hits.length + '）' : '') + T(' · 点一下直接在下面打开')),
+                    h('span', null, T('命中 ') + hits.length + T(' 段') + ' · ' + (hitPathSet ? hitPathSet.size : 0) + T(' 个文件')
+                      + (total > hits.length ? T('（共 ') + total + T(' 段，只显示前 ') + hits.length + '）' : '')
+                      + T(' · 点一下直接在下面打开')),
                     coldHits > 0
                       ? h('span', {
                           title: T('技能迭代历史（archived/logs/skills/）住在冷区，默认不搜。')

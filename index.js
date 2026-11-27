@@ -1,13 +1,382 @@
 import { DatabaseSync } from 'node:sqlite'
-import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync, statSync, renameSync, readdirSync, unlinkSync, rmdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync, statSync, renameSync, readdirSync, unlinkSync, rmdirSync, rmSync, cpSync, openSync, readSync, closeSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join, dirname, basename, resolve, sep, extname, relative } from 'node:path'
 import { homedir } from 'node:os'
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, timingSafeEqual, randomBytes } from 'node:crypto'
 import { privateDecrypt, privateEncrypt } from './private.mjs'
 
 export const name = 'memory-xfy'
 export const inject = ['tools', 'webServer', 'systemPrompt']
+
+const CONFIG_DEFAULT = {
+  source: 'local',
+  remoteUrl: '',
+  remoteToken: '',
+
+  remoteName: '',
+
+  defaultLayers: null,
+  perTurnNodes: 0,
+
+  shareMode: 'read',
+  writeLayers: null,
+
+  shareInclude: [],
+
+  acl: {},
+}
+
+function configFilePath(home) { return join(home, 'config', 'memory-xfy.json') }
+
+function deleteToken(home, tok) {
+  const f = join(home, 'mem-serve.json')
+  if (!existsSync(f)) return { ok: false, error: '没有 mem-serve.json' }
+  const raw = JSON.parse(readFileSync(f, 'utf8'))
+  const spec = (raw.tokens || {})[tok]
+  if (!spec) return { ok: false, error: '没有这个 token' }
+  delete raw.tokens[tok]
+  const tmp = f + '.tmp'
+  writeFileSync(tmp, JSON.stringify(raw, null, 2) + '\n', 'utf8')
+  renameSync(tmp, f)
+  return { ok: true, removed: spec.name || tok.slice(0, 8) }
+}
+
+function createToken(home, name, layers) {
+  const f = join(home, 'mem-serve.json')
+  const raw = existsSync(f)
+    ? JSON.parse(readFileSync(f, 'utf8'))
+    : { bind: '0.0.0.0', port: 8765, tokens: {} }
+  raw.tokens = raw.tokens || {}
+
+  let nm = String(name || '').trim()
+  if (Object.values(raw.tokens).some((sp) => sp && sp.name === nm)) {
+    return { ok: false, error: `已经有一个叫「${nm}」的 profile 了` }
+  }
+  const tok = randomBytes(32).toString('base64url')
+  if (!nm) nm = tok.slice(0, 8)
+  raw.tokens[tok] = { name: nm, layers: Array.isArray(layers) ? layers : [], hot: false }
+  const tmp = f + '.tmp'
+  writeFileSync(tmp, JSON.stringify(raw, null, 2) + '\n', 'utf8')
+  renameSync(tmp, f)
+  return { ok: true, token: tok, name: nm }
+}
+
+function renameToken(home, token, name) {
+  const f = join(home, 'mem-serve.json')
+  if (!existsSync(f)) return { ok: false, error: '还没有 mem-serve.json（先建一个 token）' }
+  const raw = JSON.parse(readFileSync(f, 'utf8'))
+  const sp = raw.tokens && raw.tokens[token]
+  if (!sp) return { ok: false, error: '没有这个 token（可能刚被删）' }
+  const nm = String(name || '').trim()
+  if (!nm) return { ok: false, error: '名字不能是空的' }
+  if (nm.length > 40) return { ok: false, error: '名字太长了（40 字符以内）' }
+  if (Object.entries(raw.tokens).some(([k, v]) => k !== token && v && v.name === nm)) {
+    return { ok: false, error: `已经有一个叫「${nm}」的 profile 了` }
+  }
+  sp.name = nm
+  const tmp = f + '.tmp'
+  writeFileSync(tmp, JSON.stringify(raw, null, 2) + '\n', 'utf8')
+  renameSync(tmp, f)
+  return { ok: true, token, name: nm, renamed: true }
+}
+
+function walkHashes(root, rel, out, limit) {
+  if (out.size >= limit) return out
+  let names = []
+  try { names = readdirSync(rel ? join(root, rel) : root) } catch (e) { return out }
+  for (const nm of names) {
+    if (nm === 'node_modules' || nm === '.git' || nm === '.DS_Store' || nm === '__pycache__') continue
+    const r = rel ? rel + '/' + nm : nm
+    const full = join(root, r)
+    let st = null
+    try { st = statSync(full) } catch (e) { continue }
+    if (st.isDirectory()) walkHashes(root, r, out, limit)
+    else if (st.isFile()) {
+      try {
+        out.set(r, 'sha256:' + createHash('sha256').update(readFileSync(full)).digest('hex').slice(0, 16))
+      } catch (e) {  }
+    }
+    if (out.size >= limit) return out
+  }
+  return out
+}
+
+function syncStatePath() {
+  return join(homedir(), '.dsh', 'cache', 'sync-state.json')
+}
+function loadSyncState() {
+  try { return JSON.parse(readFileSync(syncStatePath(), 'utf8')) } catch { return {} }
+}
+function saveSyncState(o) {
+  const p = syncStatePath()
+
+  const text = JSON.stringify(o)
+
+  try { if (readFileSync(p, 'utf8') === text) return } catch {}
+  mkdirSync(dirname(p), { recursive: true })
+  const tmp = p + '.tmp'
+  writeFileSync(tmp, text, 'utf8')
+  renameSync(tmp, p)
+}
+
+function baseRec(localHash, remoteHash, at) {
+  if (localHash != null && localHash === remoteHash) return { h: remoteHash, at }
+  return { h: remoteHash, l: localHash, at }
+}
+
+function lcsHunks(base, other) {
+  const n = base.length, m = other.length
+
+  const dp = Array.from({ length: n + 1 }, () => new Int32Array(m + 1))
+  for (let i = n - 1; i >= 0; i -= 1) {
+    for (let j = m - 1; j >= 0; j -= 1) {
+      dp[i][j] = base[i] === other[j]
+        ? dp[i + 1][j + 1] + 1
+        : Math.max(dp[i + 1][j], dp[i][j + 1])
+    }
+  }
+
+  const hunks = []
+  let i = 0, j = 0
+  let cur = null
+  const flush = () => { if (cur) { hunks.push(cur); cur = null } }
+  while (i < n || j < m) {
+    if (i < n && j < m && base[i] === other[j]) {
+      flush(); i += 1; j += 1; continue
+    }
+    if (!cur) cur = { s: i, e: i, lines: [] }
+    const down = i < n ? dp[i + 1][j] : -1
+    const right = j < m ? dp[i][j + 1] : -1
+    if (j < m && right >= down) {
+      cur.lines.push(other[j]); cur.e = i; j += 1
+    } else {
+      cur.e = i + 1; i += 1
+    }
+  }
+  flush()
+  return hunks
+}
+
+function merge3(baseText, oursText, theirsText) {
+  if (oursText === theirsText) return { ok: true, text: oursText }
+  if (oursText === baseText) return { ok: true, text: theirsText }
+  if (theirsText === baseText) return { ok: true, text: oursText }
+  const base = baseText.split('\n')
+  const ours = lcsHunks(base, oursText.split('\n'))
+  const theirs = lcsHunks(base, theirsText.split('\n'))
+
+  for (const a of ours) {
+    for (const b of theirs) {
+      const overlap = Math.max(a.s, b.s) < Math.min(a.e, b.e)
+      if (overlap) return { ok: false }
+    }
+  }
+
+  const all = [...ours.map((h) => ({ ...h, side: 'ours' })),
+               ...theirs.map((h) => ({ ...h, side: 'theirs' }))]
+    .sort((x, y) => x.s - y.s || x.e - y.e)
+  const out = []
+  let at = 0
+  for (const h of all) {
+    while (at < h.s) { out.push(base[at]); at += 1 }
+    out.push(...h.lines)
+    at = h.e
+  }
+  while (at < base.length) { out.push(base[at]); at += 1 }
+  return { ok: true, text: out.join('\n') }
+}
+
+function mergeDecision(base, localHash, remoteHash, readOnly) {
+  if (localHash === undefined && remoteHash === undefined) return 'same'
+  if (localHash === undefined) return 'only-remote'
+  if (remoteHash === undefined) return 'only-local'
+  if (localHash === remoteHash) return 'same'
+
+  if (readOnly) return 'take-remote'
+  if (!base) return 'keep-local'
+
+  const bh = base.h
+  const bl = base.l != null ? base.l : base.h
+  const localChanged = localHash !== bl
+  const remoteChanged = remoteHash !== bh
+  if (remoteChanged && !localChanged) return 'take-remote'
+  if (localChanged && !remoteChanged) return 'keep-local'
+  return 'conflict'
+}
+
+function hashText(s) {
+  return 'sha256:' + createHash('sha256').update(s).digest('hex').slice(0, 16)
+}
+
+function diffAgainstLocal(manifest, srcName) {
+  const home = homedir()
+  const onlyRemote = [], differ = []
+  let same = 0
+  for (const rel of Object.keys(manifest)) {
+    const mh = manifest[rel] && manifest[rel].hash
+    let h
+    try { h = hashText(readFileSync(join(home, '.dsh', rel))) } catch { h = undefined }
+    if (h === undefined) onlyRemote.push(rel)
+    else if (h !== mh) differ.push(rel)
+    else same += 1
+  }
+  return {
+    same,
+    onlyRemote: onlyRemote.length,
+    differ: differ.length,
+    sampleRemote: onlyRemote.slice(0, 5),
+    sampleDiffer: differ.slice(0, 5),
+  }
+}
+
+async function restartMemServe(home) {
+  const conf = JSON.parse(readFileSync(join(home, 'mem-serve.json'), 'utf8'))
+  const port = Number(conf.port) || 8765
+  const uid = typeof process.getuid === 'function' ? process.getuid() : null
+  if (uid === null) return { restarted: false, note: '拿不到 uid，得手动重启 mem-serve' }
+  try {
+    execFileSync('launchctl', ['kickstart', '-k', `gui/${uid}/com.deepseek.mem-serve`],
+      { timeout: 20000, stdio: 'ignore' })
+  } catch (e) {
+    return { restarted: false, note: 'launchctl kickstart 失败：' + String((e && e.message) || e) }
+  }
+  const t0 = Date.now()
+  while (Date.now() - t0 < 5000) {
+    try {
+      await fetch(`http://127.0.0.1:${port}/me`, { signal: AbortSignal.timeout(800) })
+      return { restarted: true, port, waitedMs: Date.now() - t0 }
+    } catch (e) {
+      await new Promise((r) => setTimeout(r, 150))
+    }
+  }
+  return { restarted: false, note: `kickstart 过了但 ${port} 五秒内没答话 —— 看 logs/mem-serve.err.log` }
+}
+
+function readServeFile(home) {
+  const f = join(home, 'mem-serve.json')
+  if (!existsSync(f)) return { _exists: false, path: f, tokens: [] }
+  try {
+    const raw = JSON.parse(readFileSync(f, 'utf8'))
+    const tokens = Object.entries(raw.tokens || {}).map(([token, spec]) => ({
+      token,
+      name: spec.name || '?',
+      layers: spec.layers || [],
+      hot: spec.hot !== false,
+      tg: !!spec.tg,
+      excludePaths: spec.exclude_paths || [],
+    }))
+    return { _exists: true, path: f, bind: raw.bind || '0.0.0.0', port: raw.port || 8765, tokens }
+  } catch (e) {
+    return { _exists: true, path: f, error: String(e), tokens: [] }
+  }
+}
+
+function readPluginConfig(home) {
+  const f = configFilePath(home)
+  if (!existsSync(f)) return { ...CONFIG_DEFAULT, _exists: false }
+  const raw = JSON.parse(readFileSync(f, 'utf8'))
+  return { ...CONFIG_DEFAULT, ...raw, _exists: true }
+}
+
+function writePluginConfig(home, patch) {
+  const f = configFilePath(home)
+  const cur = readPluginConfig(home)
+  const next = {}
+  for (const k of Object.keys(CONFIG_DEFAULT)) {
+    next[k] = patch[k] !== undefined ? patch[k] : cur[k]
+  }
+  mkdirSync(dirname(f), { recursive: true })
+  const tmp = f + '.tmp'
+  writeFileSync(tmp, JSON.stringify(next, null, 2) + '\n', 'utf8')
+  renameSync(tmp, f)
+  return { ...next, _exists: true }
+}
+
+function layersFile(home) {
+  const env = process.env.DSH_LAYERS_FILE
+  if (env) return env
+  const ptr = join(home, '.layers-path')
+
+  try {
+    if (existsSync(ptr)) {
+      const q = readFileSync(ptr, 'utf8').split('\n')[0].trim()
+      if (q) return q
+    }
+  } catch {  }
+
+  return join(home, 'projects', 'dsh-memory-xfy', 'layers.json')
+}
+
+function rootOf(cfg, home) {
+  return String((cfg && cfg.root) || '').trim() || home
+}
+
+function coldRootOf(cfg, home) {
+  const c = String((cfg && cfg.cold) || '').trim() || 'archived'
+
+  if (c.startsWith('/')) throw new Error(`cold 要写相对主路径的细分路径，不是绝对路径：${c}`)
+  if (c.split(/[\\/]/).includes('..')) throw new Error(`cold 里不能有 ..：${c}`)
+  return join(rootOf(cfg, home), c)
+}
+
+function layerDirsOf(cfg, L, home) {
+  const root = rootOf(cfg, home)
+  const cold = coldRootOf(cfg, home)
+  const out = []
+  for (const d of (L.dirs || [])) {
+    const s = String(d).trim()
+
+    if (s.startsWith('/')) throw new Error(`层 ${L.name} 的 dirs 里要写相对 ${root} 的细分路径，不是绝对路径：${s}`)
+    out.push(join(root, s))
+    out.push(join(cold, s))
+  }
+  return out
+}
+
+let _coldCache = { key: '', val: '' }
+function coldRootCached(home) {
+  const f = layersFile(home)
+  let st
+  try { st = statSync(f) } catch { return join(home, 'archived') }
+  const key = `${f}:${st.mtimeMs}:${st.size}`
+  if (_coldCache.key !== key) {
+    const cfg = JSON.parse(readFileSync(f, 'utf8'))
+    _coldCache = { key, val: coldRootOf(cfg, home) }
+  }
+  return _coldCache.val
+}
+
+function moveDir(from, to) {
+  mkdirSync(dirname(to), { recursive: true })
+  if (existsSync(to)) throw new Error(`目标已存在，拒绝覆盖：${to}`)
+  try {
+    renameSync(from, to)
+  } catch (e) {
+    if (e.code !== 'EXDEV') throw e
+    cpSync(from, to, { recursive: true })
+    rmSync(from, { recursive: true, force: true })
+  }
+}
+
+function countLayer(home, layer) {
+  const row = loadLayers(home).find(([n]) => n === layer)
+  if (!row) return { n: 0, b: 0 }
+  let b = 0
+  for (const f of row[1]) { try { b += statSync(f).size } catch {  } }
+  return { n: row[1].length, b }
+}
+
+async function readJsonBody(req) {
+  const chunks = []
+  for await (const c of req) chunks.push(c)
+  return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+}
+
+function readLayersFile(home) {
+  const d = JSON.parse(readFileSync(layersFile(home), 'utf8'))
+  return (d.layers || []).map((L) => ({ name: L.name, weight: L.weight }))
+}
 
 function binScripts(home) {
   try {
@@ -149,16 +518,21 @@ function tsOf(secs, line) {
 function loadLayers(home) {
   let cfg
   try {
-    cfg = JSON.parse(readFileSync(join(home, 'layers.json'), 'utf8'))
+    cfg = JSON.parse(readFileSync(layersFile(home), 'utf8'))
   } catch (e) {
-    throw new Error(`读不到层定义 ${join(home, 'layers.json')}：${e.message}`)
+    throw new Error(`读不到层定义 ${layersFile(home)}：${e.message}`)
   }
   const out = []
+  const root = rootOf(cfg, home)
+  const cold = coldRootOf(cfg, home)
   for (const L of cfg.layers || []) {
     const files = []
+
     for (const f of L.files || []) {
-      const fp = join(home, f)
-      if (existsSync(fp)) files.push(fp)
+      for (const base of [root, cold]) {
+        const fp = join(base, f)
+        if (existsSync(fp)) files.push(fp)
+      }
     }
     const exts = L.exts === undefined ? ['.md'] : L.exts
     const only = new Set(L.only_names || [])
@@ -194,8 +568,7 @@ function loadLayers(home) {
         files.push(fp)
       }
     }
-    for (const d of L.dirs || []) {
-      const base = join(home, d)
+    for (const base of layerDirsOf(cfg, L, home)) {
       if (existsSync(base)) walk(base, 1, base)
     }
     out.push([L.name, [...new Set(files)].sort(), Number(L.weight === undefined ? 3 : L.weight)])
@@ -380,6 +753,19 @@ function tagMapOf(db) {
   return _tagCache
 }
 
+let _catCache = null, _catAt = 0
+function catMapOf(db) {
+  const now = Date.now()
+  if (_catCache && now - _catAt < 5000) return _catCache
+  const byPath = new Map()
+  try {
+    for (const r of db.prepare('SELECT path, cat FROM cats').all()) byPath.set(r.path, r.cat)
+  } catch {  }
+  _catCache = { byPath }
+  _catAt = now
+  return _catCache
+}
+
 let _kwCache = null, _kwAt = 0
 
 function chipsOfHead(head) {
@@ -421,7 +807,7 @@ function kwMapOf(db) {
   return m
 }
 
-const DOC_LEVEL_LAYERS = new Set(['docs', 'skills', 'bin'])
+const DOC_LEVEL_LAYERS = new Set(['docs', 'skills', 'info'])
 
 function collapseByDoc(hits) {
   const seen = new Map()
@@ -543,7 +929,7 @@ function scoreRows(rows, query, minWcov = 0.25, wantWhy = false) {
     const _layerMul = LAYER_MUL[r.layer] || 1
     score *= _layerMul
     let _decayVal = 1, _decayDays = 0
-    if (['daily', 'log', 'reviews'].includes(r.layer)) {
+    if (['daily', 'logs', 'reviews'].includes(r.layer)) {
       const dm = /(\d{4})-(\d{2})-(\d{2})/.exec(String(r.path))
       if (dm) {
         const then = new Date(+dm[1], +dm[2] - 1, +dm[3])
@@ -590,6 +976,49 @@ function openDb(dbPath) {
   db.exec(`CREATE TABLE IF NOT EXISTS chunk_ts(
     path TEXT, line INTEGER, ts TEXT, ts_end TEXT, PRIMARY KEY(path, line))`)
   return db
+}
+
+function syncFacets(db, home) {
+  const catN = new Map()
+  const tagN = new Map()
+
+  const HDR = 16384
+  for (const [, files] of layers(home)) {
+    for (const f of files) {
+      let text = ''
+      let fd = null
+      try {
+        fd = openSync(f, 'r')
+        const buf = Buffer.alloc(HDR)
+        const got = readSync(fd, buf, 0, HDR, 0)
+        if (got > 0) text = buf.toString('utf8', 0, got)
+      } catch { continue } finally { if (fd !== null) { try { closeSync(fd) } catch {  } } }
+      const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)
+      if (!m) continue
+      const fm = m[1]
+      const cv = /^category\s*:\s*(.*)$/m.exec(fm)
+      if (cv) {
+        const v = cv[1].trim().replace(/^["']|["']$/g, '')
+        for (const part of v.split(/[,，、]+/)) {
+          const x = part.trim()
+          if (x) catN.set(x, (catN.get(x) || 0) + 1)
+        }
+      }
+      const tv = /^tags\s*:\s*(.*)$/m.exec(fm)
+      if (tv) {
+        const v = tv[1].trim().replace(/^["']|["']$/g, '')
+        for (const x of v.split(/[\s,]+/)) if (x) tagN.set(x, (tagN.get(x) || 0) + 1)
+      }
+    }
+  }
+  db.exec(`CREATE TABLE IF NOT EXISTS facets(
+    kind TEXT NOT NULL, value TEXT NOT NULL, n INT NOT NULL,
+    PRIMARY KEY (kind, value)) WITHOUT ROWID`)
+  db.prepare('DELETE FROM facets').run()
+  const ins = db.prepare('INSERT OR REPLACE INTO facets(kind, value, n) VALUES(?,?,?)')
+  for (const [v, n] of catN) ins.run('category', v, n)
+  for (const [v, n] of tagN) ins.run('tag', v, n)
+  return { categories: catN.size, tags: tagN.size }
 }
 
 function indexAll(db, home, { quiet = true } = {}) {
@@ -646,15 +1075,22 @@ function indexAll(db, home, { quiet = true } = {}) {
     }
   }
   const all = db.prepare('SELECT path FROM files').all()
+  let removed = 0
   for (const { path } of all) {
     if (!seen.has(path)) {
+      removed++
       for (const t of ALL_TABLES) delChunk[t].run(path)
       db.prepare('DELETE FROM chunk_ts WHERE path = ?').run(path)
       db.prepare('DELETE FROM files WHERE path = ?').run(path)
     }
   }
+
+  let facets = null
+  let haveFacets = false
+  try { haveFacets = db.prepare('SELECT COUNT(*) AS n FROM facets').get().n > 0 } catch { haveFacets = false }
+  if (added || removed || !haveFacets) facets = syncFacets(db, home)
   const total = ALL_TABLES.reduce((a, t) => a + db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n, 0)
-  return { added, chunks, skipped, total }
+  return { added, chunks, skipped, total, facets }
 }
 
 function splitEntries(file, text) {
@@ -772,19 +1208,27 @@ function groupOf(layer, file, text) {
     if (cat) return SKILL_GROUPS[cat] || ('📁 ' + cat)
     return '未分类'
   }
-  if (layer === 'log') {
+  if (layer === 'logs') {
+
     const dir = basename(dirname(file))
     if (dir === 'changelog' || dir === 'outbound') return dir
-    if (file.includes('logs/skills/')) return 'skills'
-    return ''
+
+    if (file.includes('/logs/skills/')) return 'skills'
+
+    return dir || 'logs'
   }
   if (layer === 'daily') {
     const dir = basename(dirname(file))
     return dir === 'daily' ? basename(file).replace(/\.md$/i, '') : dir
   }
+
+  if (layer === 'info') return ''
   if (layer === 'profiles') {
     const dir = basename(dirname(file))
-    return dir === 'users' ? '👤 users' : '👥 groups'
+
+    if (dir === 'users') return '👤 users'
+    if (dir === 'tgchats') return '💬 tgchats'
+    return '📁 ' + dir
   }
   return ''
 }
@@ -796,25 +1240,24 @@ function groupDirOf(layer, file) {
     const sub = join(dir, basename(file).replace(/\.md$/i, ''))
     return existsSync(sub) ? sub : dir
   }
-  if (layer === 'log') {
-    const dir = dirname(file)
-    const d = basename(dir)
-    if (d === 'changelog' || d === 'outbound') return dir
-    if (file.includes('logs/skills/')) return dirname(dirname(file))
-    return ''
+  if (layer === 'logs') {
+
+    if (file.includes('/logs/skills/')) return dirname(dirname(file))
+    return dirname(file)
   }
   if (layer === 'profiles') return dirname(file)
+  if (layer === 'info') return ''
   return ''
 }
 
 const LAYER_DIRS = {
   docs: 'docs', skills: 'skills', daily: 'daily',
-  reviews: 'reviews', log: 'logs', bin: 'bin',
+  reviews: 'reviews', logs: 'logs', info: 'info',
   profiles: 'profiles',
 }
 
 const _treeCache = new Map()
-const _TREE_CACHE_VER = 11
+const _TREE_CACHE_VER = 14
 
 function _fileSig(st) {
   return `${st.mtimeMs}:${st.size}`
@@ -885,7 +1328,7 @@ let _HW_CACHE = null, _HW_MTIME = -1
 function hotWindow() {
   const def = hotWindowDefaults()
   try {
-    const f = join(homedir(), '.dsh', 'layers.json')
+    const f = layersFile(join(homedir(), '.dsh'))
     const mt = statSync(f).mtimeMs
     if (_HW_CACHE && _HW_MTIME === mt) return _HW_CACHE
     const cfg = JSON.parse(readFileSync(f, 'utf8'))
@@ -904,7 +1347,23 @@ function dayOfPath(p) {
   const d = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`)
   return Number.isNaN(d.getTime()) ? null : d
 }
-function isArchived(p) { return String(p).includes('/archived/') }
+
+function isArchived(p) {
+  const c = coldRootCached(join(homedir(), '.dsh'))
+  const s = String(p)
+  return s === c || s.startsWith(c + sep)
+}
+
+function zoneOf(p) {
+  const home = join(homedir(), '.dsh')
+  const cfg = JSON.parse(readFileSync(layersFile(home), 'utf8'))
+  const R = rootOf(cfg, home)
+  const C = coldRootOf(cfg, home)
+  const s = String(p)
+  if (s === C || s.startsWith(C + sep)) return { cold: true, root: R, coldRoot: C, rel: relative(C, s) }
+  if (s === R || s.startsWith(R + sep)) return { cold: false, root: R, coldRoot: C, rel: relative(R, s) }
+  return null
+}
 function tblOf(layer, p) {
   if (isArchived(p)) return 'chunks_record'
   if (!(layer in hotWindowDefaults())) return 'chunks'
@@ -916,7 +1375,7 @@ function tblOf(layer, p) {
   return days <= keep ? 'chunks' : 'chunks_record'
 }
 
-const RECORD_LAYERS = new Set(['daily', 'log'])
+const RECORD_LAYERS = new Set(['daily', 'logs'])
 const ALL_TABLES = ['chunks', 'chunks_record']
 function tablesFor(lf, zone) {
   if (zone === 'none') return []
@@ -1267,9 +1726,36 @@ function originOk(req) {
   try { return new URL(o).host === (req.headers.host || '') } catch { return false }
 }
 
+function syncLayersPtr(home) {
+  try {
+    const own = join(import.meta.dirname, 'layers.json')
+
+    if (!existsSync(own)) {
+      try {
+        writeFileSync(own, readFileSync(join(import.meta.dirname, 'default-layers.json'), 'utf8'), 'utf8')
+        console.error('[memory-xfy] 没找到层配置，已按默认生成：' + own)
+      } catch (e) {
+        console.error('[memory-xfy] 生成默认层配置失败：', e.message)
+      }
+    }
+    if (!existsSync(own)) return
+    const ptr = join(home, '.layers-path')
+    try {
+      if (readFileSync(ptr, 'utf8').split('\n')[0].trim() === own) return
+    } catch {  }
+    writeFileSync(ptr, own + '\n', 'utf8')
+  } catch (e) {
+
+    console.error('[memory-xfy] 写 .layers-path 失败：', e.message)
+  }
+}
+
 export function apply(ctx, config = {}) {
   const home = config.home || process.env.DSH_HOME || join(homedir(), '.dsh')
-  const dbPath = config.dbPath || join(home, 'cache', 'mem.db')
+  syncLayersPtr(home)
+
+  const rootCfg = JSON.parse(readFileSync(layersFile(home), 'utf8'))
+  const dbPath = config.dbPath || join(rootOf(rootCfg, home), 'cache', 'mem.db')
   const autoIndex = config.autoIndexOnSearch !== false
   const db = openDb(dbPath)
 
@@ -1478,13 +1964,12 @@ export function apply(ctx, config = {}) {
     const applySnip = (body) => {
       const src = String(body.path || '')
       const action = String(body.action || 'archive')
-      const H = join(homedir(), '.dsh')
-      const rel0 = relative(H, src)
-      if (!rel0 || rel0.startsWith('..')) return { ok: false, error: '只能操作 ~/.dsh 下的文件' }
-      const isCold = rel0.split(/[\\/]/)[0] === 'archived'
-      const hotRel = isCold ? rel0.replace(/^archived[\\/]/, '') : rel0
-      const hotPath = join(H, hotRel)
-      const coldPath = join(H, 'archived', hotRel)
+      const Z = zoneOf(src)
+      if (!Z) return { ok: false, error: '这个文件不在记忆根或冷区里' }
+      const isCold = Z.cold
+      const hotRel = Z.rel
+      const hotPath = join(Z.root, hotRel)
+      const coldPath = join(Z.coldRoot, hotRel)
       const now = _nowLocal()
 
       if (action === 'archive') {
@@ -1512,11 +1997,11 @@ export function apply(ctx, config = {}) {
         writeText(coldPath, cold.replace(/\s*$/, '\n') + block)
         writeText(hotPath, head + kept)
         reindex()
-        return { ok: true, message: `已存档「${headingOf(parseFrontmatter(removed).body) || '这一节'}」→ archived/${hotRel}` }
+        return { ok: true, message: `已存档「${headingOf(parseFrontmatter(removed).body) || '这一节'}」→ ${relative(Z.root, Z.coldRoot)}/${hotRel}` }
       }
 
       if (action === 'restore') {
-        if (!existsSync(coldPath)) return { ok: false, error: '冷区没有对应文件：archived/' + hotRel }
+        if (!existsSync(coldPath)) return { ok: false, error: '冷区没有对应文件：' + relative(Z.root, Z.coldRoot) + '/' + hotRel }
         const cold = readText(coldPath)
         const snips = parseSnips(cold)
         const idx = Number(body.index)
@@ -1533,7 +2018,7 @@ export function apply(ctx, config = {}) {
         if (!parseFrontmatter(coldKept).body.trim()) {
           try {
             unlinkSync(coldPath)
-            const stop = join(homedir(), '.dsh', 'archived')
+            const stop = Z.coldRoot
             let d = dirname(coldPath)
             while (d !== stop && d.startsWith(stop + sep)) {
               try { if (readdirSync(d).length) break; rmdirSync(d) } catch { break }
@@ -1586,21 +2071,21 @@ export function apply(ctx, config = {}) {
       const zone = String(body.zone || '')
       if (!src) return { ok: false, error: '没有路径' }
       if (zone !== 'hot' && zone !== 'cold') return { ok: false, error: 'zone 只能是 hot / cold' }
-      const H = join(homedir(), '.dsh')
-      const rel = relative(H, src)
-      if (!rel || rel.startsWith('..')) return { ok: false, error: '只能移动 ~/.dsh 下的文件' }
-      const isCold = rel.split(/[\\/]/)[0] === 'archived'
+      const Z = zoneOf(src)
+      if (!Z) return { ok: false, error: '这个文件不在记忆根或冷区里' }
+      const rel = Z.rel
+      const isCold = Z.cold
       if (zone === 'cold' && !isCold) {
-        const dst = join(H, 'archived', rel)
+        const dst = join(Z.coldRoot, rel)
         try {
           mkdirSync(dirname(dst), { recursive: true })
           renameSync(src, dst)
         } catch (e) { return { ok: false, error: '移动失败：' + String(e) } }
         reindex()
-        return { ok: true, path: dst, message: '已移到冷区（archived/）' }
+        return { ok: true, path: dst, message: '已移到冷区（' + relative(Z.root, Z.coldRoot) + '/）' }
       }
       if (zone === 'hot' && isCold) {
-        const dst = join(H, rel.replace(/^archived[\\/]/, ''))
+        const dst = join(Z.root, rel)
         if (existsSync(dst)) {
           return { ok: false,
             error: `热区已有同名文件，不敢覆盖：${relative(H, dst)}`
@@ -1657,6 +2142,18 @@ export function apply(ctx, config = {}) {
           headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
         })
         if (!authOk(req, home)) return json({ ok: false, error: '未登录：缺 dsh-auth cookie 或 ?token=' }, 403)
+
+        if (url.pathname === '/memory-xfy/config') {
+          try {
+            const cfg = readPluginConfig(home)
+            const layers = readLayersFile(home)
+            let dbBytes = null
+            try { dbBytes = statSync(dbPath).size } catch {  }
+            return json({ ok: true, config: cfg, layers, dbBytes,
+                          serve: readServeFile(home),
+                          paths: { home, db: dbPath, file: configFilePath(home) } })
+          } catch (e) { return json({ ok: false, error: String(e) }) }
+        }
         if (url.pathname === '/memory-xfy/stats') {
           try {
             const _t0 = Date.now()
@@ -1670,9 +2167,106 @@ export function apply(ctx, config = {}) {
                           timing: { fresh: _t1 - _t0, queries: _t2 - _t1 } })
           } catch (e) { return json({ ok: false, error: String(e) }) }
         }
+
+        if (url.pathname === '/memory-xfy/facets') {
+          try {
+            ensureFresh()
+            const g = (k) => url.searchParams.get(k) || ''
+            const anyCond = ['q', 'layer', 'category', 'tag', 'must', 'not', 'zone', 'all',
+                             'minimp', 'maximp', 'since'].some((k) => g(k))
+            const bump = (map, key, zone) => {
+              const cur = map.get(key) || { n: 0, hot: 0, cold: 0 }
+              cur.n += 1
+              if (zone === 'cold') cur.cold += 1; else cur.hot += 1
+              map.set(key, cur)
+            }
+            const catAgg = new Map()
+            const tagAgg = new Map()
+            let files = 0
+            if (anyCond) {
+
+              const lim = Math.max(1, Number(g('n')) || 20)
+              const hits = search(db, g('q'), lim, g('layer'), {
+                must: g('must'), not: g('not'), path: g('path'), category: g('category'),
+                tags: g('tag'), zone: g('zone'), all: g('all') === '1',
+                minimp: g('minimp'), maximp: g('maximp'), since: g('since'),
+              })
+              const cm = catMapOf(db).byPath
+              const tm = tagMapOf(db).byPath
+              const seen = new Set()
+              for (const h of hits) {
+                const fp = h.full || h.path
+                if (!fp || seen.has(fp)) continue
+                seen.add(fp)
+                const z = isArchived(fp) ? 'cold' : 'hot'
+                const c = cm.get(fp)
+                if (c) bump(catAgg, c, z)
+                for (const t of tm.get(fp) || []) bump(tagAgg, t, z)
+              }
+              files = seen.size
+            } else {
+              for (const r of db.prepare('SELECT kind, zone, value, n FROM facets').all()) {
+                const m = r.kind === 'category' ? catAgg : tagAgg
+                const cur = m.get(r.value) || { n: 0, hot: 0, cold: 0 }
+                cur.n += r.n
+                if (r.zone === 'cold') cur.cold += r.n; else cur.hot += r.n
+                m.set(r.value, cur)
+              }
+              files = db.prepare('SELECT COUNT(*) AS n FROM files').get().n
+            }
+            const pack = (m, keyName) => [...m.entries()]
+              .sort((a, b2) => b2[1].n - a[1].n || String(a[0]).localeCompare(String(b2[0])))
+              .map(([k, v]) => ({ [keyName]: k, n: v.n, hot: v.hot, cold: v.cold }))
+            return json({ ok: true, files, categories: pack(catAgg, 'v'), tags: pack(tagAgg, 'tag') })
+          } catch (e) { return json({ ok: false, error: String(e) }) }
+        }
         if (url.pathname === '/memory-xfy/tree') {
           try { return json({ ok: true, layers: buildTree(home) }) }
           catch (e) { return json({ ok: false, error: String(e) }) }
+        }
+
+        if (url.pathname === '/memory-xfy/layout') {
+          try {
+            const cfg = JSON.parse(readFileSync(layersFile(home), 'utf8'))
+            const root = rootOf(cfg, home)
+            const cold = coldRootOf(cfg, home)
+            const rows = []
+            for (const [name, files, weight] of loadLayers(home)) {
+              let bytes = 0
+              for (const f of files) { try { bytes += statSync(f).size } catch {  } }
+              const cfgL = (cfg.layers || []).find((L) => L.name === name) || {}
+
+              rows.push({
+                layer: name, weight, files: files.length, bytes,
+                dirs: (cfgL.dirs || []).map((d) => ({
+                  raw: String(d).trim(), abs: join(root, String(d).trim()),
+                })),
+                fixedFiles: (cfgL.files || []).map((f) => ({
+                  raw: String(f).trim(), abs: join(root, String(f).trim()),
+                })),
+                movable: name !== 'rules',
+              })
+            }
+            return json({
+              ok: true, home,
+              root: { raw: String(cfg.root || '').trim(), abs: root },
+              cold: { raw: String(cfg.cold || '').trim(), abs: cold, default: 'archived' },
+              configPath: layersFile(home), layers: rows,
+            })
+          } catch (e) { return json({ ok: false, error: String(e) }) }
+        }
+
+        if (url.pathname === '/memory-xfy/config-export') {
+          try {
+            return json({
+              ok: true,
+              kind: 'dsh-memory-xfy/config',
+              version: 1,
+              at: new Date().toISOString(),
+              layers: JSON.parse(readFileSync(layersFile(home), 'utf8')),
+              plugin: readPluginConfig(home),
+            })
+          } catch (e) { return json({ ok: false, error: String(e) }) }
         }
         if (url.pathname === '/memory-xfy/reveal'
           || url.pathname === '/memory-xfy/open'
@@ -1747,13 +2341,8 @@ export function apply(ctx, config = {}) {
         if (url.pathname === '/memory-xfy/tags') {
           try {
 
-            const counts = new Map()
-            for (const tags of tagMapOf(db).byPath.values()) {
-              for (const t of tags) counts.set(t, (counts.get(t) || 0) + 1)
-            }
-            const list = [...counts.entries()]
-              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-              .map(([tag, n]) => ({ tag, n }))
+            const list = db.prepare(
+              "SELECT value AS tag, n FROM facets WHERE kind='tag' ORDER BY n DESC, tag").all()
             return json({ ok: true, tags: list })
           } catch (e) { return json({ ok: false, error: String(e), tags: [] }) }
         }
@@ -1845,6 +2434,540 @@ export function apply(ctx, config = {}) {
         }
         return json({ ok: false, error: 'not found' })
       },
+      })
+
+      const offCfg = webServer.register({
+        kind: 'exact',
+        path: '/memory-xfy/config-save',
+        handler: async (req, res) => {
+          const send = (obj, code = 200) => {
+            res.writeHead(code, {
+              'content-type': 'application/json; charset=utf-8',
+              'cache-control': 'no-store',
+            })
+            res.end(JSON.stringify(obj))
+          }
+          if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
+          try {
+            const chunks = []
+            for await (const c of req) chunks.push(c)
+            const patch = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+
+            const unknown = Object.keys(patch).filter((k) => !(k in CONFIG_DEFAULT))
+            return send({ ok: true, config: writePluginConfig(home, patch), unknown })
+          } catch (e) { return send({ ok: false, error: String(e) }) }
+        },
+      })
+
+      const offLayout = webServer.register({
+        kind: 'exact',
+        path: '/memory-xfy/layout-save',
+        handler: async (req, res) => {
+          const send = (obj, code = 200) => {
+            res.writeHead(code, {
+              'content-type': 'application/json; charset=utf-8',
+              'cache-control': 'no-store',
+            })
+            res.end(JSON.stringify(obj))
+          }
+          if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
+          try {
+            const body = await readJsonBody(req)
+            const kind = String(body.kind || 'dir')
+            const cfgPath = layersFile(home)
+            const cfg = JSON.parse(readFileSync(cfgPath, 'utf8'))
+            const root = rootOf(cfg, home)
+            const coldRoot = coldRootOf(cfg, home)
+            const to = String(body.to == null ? '' : body.to).trim()
+            if (to.includes('..')) return send({ ok: false, error: '路径里不能有 ..' })
+            if (kind !== 'root' && to.startsWith('/')) {
+              return send({ ok: false, error: '细分路径只能写相对主路径的路径（比如 docs、logs/changelog），不是绝对路径' })
+            }
+
+            const countAll = () => {
+              let n = 0, b = 0
+              for (const [, fs2] of loadLayers(home)) {
+                for (const f of fs2) { try { n++; b += statSync(f).size } catch {  } }
+              }
+              return { n, b }
+            }
+            const writeCfg = () => {
+              const tmp = cfgPath + '.tmp'
+              writeFileSync(tmp, JSON.stringify(cfg, null, 2) + '\n', 'utf8')
+              renameSync(tmp, cfgPath)
+            }
+            const moveFile = (from, to) => {
+              mkdirSync(dirname(to), { recursive: true })
+              if (existsSync(to)) throw new Error(`目标已存在，拒绝覆盖：${to}`)
+              renameSync(from, to)
+            }
+            const same = (a, b) => a.n === b.n && a.b === b.b
+
+            if (kind === 'dir') {
+              const layer = String(body.layer || '')
+              if (!layer) return send({ ok: false, error: '缺 layer' })
+              if (layer === 'rules') return send({ ok: false, error: 'rules 层是文件白名单（跟着 AGENTS.md 走），没有细分目录' })
+              const L = (cfg.layers || []).find((x) => x.name === layer)
+              if (!L) return send({ ok: false, error: `没有这一层：${layer}` })
+              const idx = Number(body.index)
+              const arr = L.dirs || []
+              if (!Number.isInteger(idx) || idx < 0 || idx >= arr.length) {
+                return send({ ok: false, error: `第 ${idx} 条细分路径不存在（这一层共 ${arr.length} 条）` })
+              }
+              if (!to) return send({ ok: false, error: '细分路径不能留空' })
+              const oldRaw = String(arr[idx]).trim()
+              if (oldRaw === to) {
+                const c = countLayer(home, layer)
+                return send({ ok: true, moved: [], before: c, after: c, verified: true, note: '路径没变' })
+              }
+              const from = join(root, oldRaw)
+              const dest = join(root, to)
+              const before = countLayer(home, layer)
+              if (existsSync(from)) moveDir(from, dest)
+              arr[idx] = to
+              writeCfg()
+
+              try {
+                for (const t of ['files', 'chunks', 'chunks_record', 'chunk_ts']) {
+                  try { db.exec(`DELETE FROM ${t}`) } catch {  }
+                }
+                indexAll(db, home)
+                _treeCache.clear()
+              } catch (e2) {
+                console.error('[memory-xfy] 搬完重建索引失败：', e2.message)
+              }
+              const after = countLayer(home, layer)
+              const verified = same(before, after)
+              return send({
+                ok: true, moved: [oldRaw + ' → ' + to], before, after, verified,
+                ...(verified ? {} : { error: `搬完对不上：${before.n} 个 / ${before.b} 字节 → ${after.n} 个 / ${after.b} 字节` }),
+              })
+            }
+
+            if (kind === 'cold') {
+              const newCold = to || 'archived'
+              if (newCold === String(cfg.cold || '').trim()) {
+                const c = countAll()
+                return send({ ok: true, moved: [], before: c, after: c, verified: true, note: '冷区路径没变' })
+              }
+              const dest = join(root, newCold)
+              const before = countAll()
+              if (existsSync(coldRoot)) moveDir(coldRoot, dest)
+              cfg.cold = newCold === 'archived' ? '' : newCold
+              writeCfg()
+
+              try { indexAll(db, home); _treeCache.clear() } catch (e2) {
+                console.error('[memory-xfy] 搬完重建索引失败：', e2.message)
+              }
+              const after = countAll()
+              const verified = same(before, after)
+              return send({
+                ok: true, moved: [relative(root, coldRoot) + ' → ' + newCold], before, after, verified,
+                ...(verified ? {} : { error: `搬完对不上：${before.n} 个 → ${after.n} 个` }),
+              })
+            }
+
+            if (kind === 'root') {
+              if (to && !to.startsWith('/')) return send({ ok: false, error: '主路径要给绝对路径（或留空 = ~/.dsh）' })
+              const newRoot = to || join(homedir(), '.dsh')
+              if (newRoot === root) {
+                const c = countAll()
+                return send({ ok: true, moved: [], before: c, after: c, verified: true, note: '主路径没变' })
+              }
+
+              if (to && existsSync(newRoot)) {
+                return send({ ok: false, error: `目标目录已经存在，不敢往里搬：${newRoot}` })
+              }
+              const before = countAll()
+
+              const rels = new Set()
+              for (const L of (cfg.layers || [])) {
+                for (const d of (L.dirs || [])) rels.add(String(d).trim())
+              }
+              rels.add(relative(root, coldRoot))
+              for (const f of ['cache/mem.db', 'cache/mem.db-wal', 'cache/mem.db-shm',
+                'cache/mem-signals.json', 'cache/sync-state.json']) rels.add(f)
+              try {
+                for (const n of readdirSync(join(root, 'cache'))) {
+                  if (n.startsWith('mem-access.jsonl')) rels.add('cache/' + n)
+                }
+              } catch {  }
+              const moved = []
+              for (const rel of [...rels].sort()) {
+                const from = join(root, rel)
+                if (!existsSync(from)) continue
+                const dest = join(newRoot, rel)
+                moveDir(from, dest)
+                moved.push(rel)
+              }
+              cfg.root = to
+              writeCfg()
+
+              try { indexAll(db, home); _treeCache.clear() } catch (e2) {
+                console.error('[memory-xfy] 搬完重建索引失败：', e2.message)
+              }
+              const after = countAll()
+              const verified = same(before, after)
+              return send({
+                ok: true, moved, before, after, verified,
+                ...(verified ? {} : { error: `搬完对不上：${before.n} 个 / ${before.b} 字节 → ${after.n} 个 / ${after.b} 字节` }),
+              })
+            }
+
+            return send({ ok: false, error: `不认识的 kind：${kind}（dir / cold / root）` })
+          } catch (e) { return send({ ok: false, error: String(e) }) }
+        },
+      })
+
+      const offCfgImport = webServer.register({
+        kind: 'exact',
+        path: '/memory-xfy/config-import',
+        handler: async (req, res) => {
+          const send = (obj, code = 200) => {
+            res.writeHead(code, {
+              'content-type': 'application/json; charset=utf-8',
+              'cache-control': 'no-store',
+            })
+            res.end(JSON.stringify(obj))
+          }
+          if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
+          try {
+            const body = await readJsonBody(req)
+            const what = String(body.what || 'both')
+            const out = {}
+            if (what !== 'plugin') {
+              const lay = body.layers
+              if (!lay || !Array.isArray(lay.layers)) return send({ ok: false, error: 'layers 形状不对（要有 layers 数组）' })
+              const cfgPath = layersFile(home)
+              const tmp = cfgPath + '.tmp'
+              writeFileSync(tmp, JSON.stringify(lay, null, 2) + '\n', 'utf8')
+              renameSync(tmp, cfgPath)
+              out.layers = cfgPath
+            }
+            if (what !== 'layers') {
+              const plug = { ...(body.plugin || {}) }
+              delete plug._exists
+              out.plugin = writePluginConfig(home, plug)
+              out.unknown = Object.keys(plug).filter((k) => !(k in CONFIG_DEFAULT))
+            }
+            return send({ ok: true, ...out })
+          } catch (e) { return send({ ok: false, error: String(e) }) }
+        },
+      })
+
+      const offTokNew = webServer.register({
+        kind: 'exact',
+        path: '/memory-xfy/token-new',
+        handler: async (req, res) => {
+          const send = (obj, code = 200) => {
+            res.writeHead(code, {
+              'content-type': 'application/json; charset=utf-8',
+              'cache-control': 'no-store',
+            })
+            res.end(JSON.stringify(obj))
+          }
+          if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
+          try {
+            const chunks = []
+            for await (const c of req) chunks.push(c)
+            const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+
+            const r = body.token
+              ? renameToken(home, String(body.token), body.name)
+              : createToken(home, body.name, body.layers)
+            if (!r.ok) return send(r)
+
+            const rs = r.renamed
+              ? { restarted: false, note: '只改了名字，token 值没变，不用重启' }
+              : await restartMemServe(home)
+            return send({ ...r, restart: rs, note: rs.restarted ? 'mem-serve 已重启，新 token 立即可用' : rs.note })
+          } catch (e) { return send({ ok: false, error: String(e) }) }
+        },
+      })
+
+      const offTokDel = webServer.register({
+        kind: 'exact',
+        path: '/memory-xfy/token-del',
+        handler: async (req, res) => {
+          const send = (obj, code = 200) => {
+            res.writeHead(code, {
+              'content-type': 'application/json; charset=utf-8',
+              'cache-control': 'no-store',
+            })
+            res.end(JSON.stringify(obj))
+          }
+          if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
+          try {
+            const chunks = []
+            for await (const c of req) chunks.push(c)
+            const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+            const r = deleteToken(home, String(body.token || ''))
+            if (!r.ok) return send(r)
+
+            const rs = await restartMemServe(home)
+            return send({ ...r, restart: rs, note: rs.restarted ? 'mem-serve 已重启，这个 token 立刻失效' : rs.note })
+          } catch (e) { return send({ ok: false, error: String(e) }) }
+        },
+      })
+
+      const offRemote = webServer.register({
+        kind: 'exact',
+        path: '/memory-xfy/remote',
+        handler: async (req, res) => {
+          const send = (obj, code = 200) => {
+            res.writeHead(code, {
+              'content-type': 'application/json; charset=utf-8',
+              'cache-control': 'no-store',
+            })
+            res.end(JSON.stringify(obj))
+          }
+          if (req.method !== 'POST') return send({ ok: false, error: '请用 POST' }, 405)
+          if (!originOk(req)) return send({ ok: false, error: '跨域请求被拒' }, 403)
+          try {
+            const chunks = []
+            for await (const c of req) chunks.push(c)
+            const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+            const cfg = readPluginConfig(home)
+            let url = String(body.remoteUrl || cfg.remoteUrl || '').trim()
+            const tok = String(body.remoteToken || cfg.remoteToken || '').trim()
+            if (!url || !tok) return send({ ok: false, error: '还没填服务器网址 / token' }, 400)
+            if (!/^https?:\/\//i.test(url)) url = 'http://' + url
+            url = url.replace(/\/+$/, '')
+            const action = String(body.action || 'me')
+            if (action === 'me') {
+              const r = await fetch(url + '/me?token=' + encodeURIComponent(tok),
+                { signal: AbortSignal.timeout(8000) })
+              const j = await r.json().catch(() => ({}))
+              const out = { ok: r.ok && !!j.name, status: r.status, me: j,
+                error: r.ok && j.name ? undefined : (j.error || ('主服务器回 ' + r.status)) }
+
+              if (out.ok && body.wantDiff) {
+                const srcName2 = String(cfg.remoteName || '').trim().replace(/[^\w.\-]/g, '_') || 'remote'
+                try {
+                  const r2 = await fetch(url + '/sync?token=' + encodeURIComponent(tok), {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ protocol: 1, baseline: {}, changes: [], manifestOnly: true }),
+                    signal: AbortSignal.timeout(15000),
+                  })
+                  const j2 = await r2.json().catch(() => ({}))
+                  if (r2.ok && j2.manifest) out.diff = diffAgainstLocal(j2.manifest, srcName2)
+                  else out.diffError = j2.error || ('清单请求回 ' + r2.status)
+                } catch (e) { out.diffError = String((e && e.message) || e) }
+              }
+              return send(out)
+            }
+            if (action === 'sync') {
+
+              const srcName0 = String(cfg.remoteName || '').trim().replace(/[^\w.\-]/g, '_') || 'remote'
+              const st0 = (loadSyncState()[srcName0]) || {}
+              const baseline0 = {}
+              for (const [rel, rec] of Object.entries(st0)) {
+                if (rec && rec.h) baseline0[rel] = rec.h
+              }
+              const r = await fetch(url + '/sync?token=' + encodeURIComponent(tok), {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ ...(body.payload || {}), baseline: baseline0 }),
+                signal: AbortSignal.timeout(120000),
+              })
+              const j = await r.json().catch(() => ({}))
+
+              const srcName = String(cfg.remoteName || '').trim().replace(/[^\w.\-]/g, '_') || 'remote'
+              const state = loadSyncState()
+              const stFor = state[srcName] || (state[srcName] = {})
+              const home0 = homedir()
+              const d0 = new Date()
+              const p2 = (n) => String(n).padStart(2, '0')
+              const stamp = String(d0.getFullYear()) + p2(d0.getMonth() + 1) + p2(d0.getDate()) +
+                'T' + p2(d0.getHours()) + p2(d0.getMinutes()) + p2(d0.getSeconds())
+
+              const basePathOf = (rel) => join(home0, '.dsh', 'cache', 'sync-base', rel)
+              const writeBase = (rel, text) => {
+                if (typeof text !== 'string') return
+                const bp = basePathOf(rel)
+                mkdirSync(dirname(bp), { recursive: true })
+                writeFileSync(bp, text, 'utf8')
+              }
+              const conflictRoot = join(home0, '.dsh', 'conflict')
+              const hdrOf = (role, rel) =>
+                `<!-- sync-conflict role=${role} at=${stamp} base=${rel} resolved=pending -->\n`
+              const stripHdr = (t) => String(t).replace(/^<!-- sync-conflict [^>]*-->\n/, '')
+
+              const infoOf = (rel, extra) => {
+                const e = extra || {}
+                return `# 同步冲突 ${e.bid || '?'}
+
+- **原文件**：\`${rel}\`
+- **时间**：${stamp}
+- **状态**：未处理（pending）
+- **远端**：${e.remoteName || '?'} ${e.remoteUrl ? '（' + e.remoteUrl + '）' : ''}
+- **判定**：两边都改过（三方比较：base / 本地 / 远端三个 hash 互不相同）
+
+## hash（判据存档）
+
+- base（上次同步时两边一致的那版）：\`${e.baseHash || '（没有 base）'}\`
+- 本地（kept 这份）：\`${e.localHash || '?'}\`
+- 远端（conflict 这份）：\`${e.remoteHash || '?'}\`
+
+## 目录里的文件
+
+- \`${basename(rel)}.kept\` = **保留的**：正式文件里现在就是它（本地那版没被覆盖）
+- \`${basename(rel)}.conflict\` = **冲突的**：远端想写进来、被挡在外面的那份
+
+## 怎么处理
+
+1. 两份对着看，按需要改 \`${rel}\`
+2. 删掉整个目录：\`rm -rf ~/.dsh/conflict/${e.bid || '???'}\`
+   （不删也行：下次同步两边对齐时插件会自己清掉）
+`
+              }
+
+              const nextBatchDir = () => {
+                let n = 1
+                while (existsSync(join(conflictRoot, `${stamp}_${n}`))) n += 1
+                const dir = join(conflictRoot, `${stamp}_${n}`)
+                mkdirSync(dir, { recursive: true })
+                return dir
+              }
+
+              const findBatchDir = (rel) => {
+                try {
+                  for (const fn of readdirSync(conflictRoot)) {
+                    const d = join(conflictRoot, fn)
+                    let info = ''
+                    try { info = readFileSync(join(d, 'info.md'), 'utf8') } catch { continue }
+                    if (info.includes('`' + rel + '`')) return d
+                  }
+                } catch {}
+                return null
+              }
+
+              const saveConflictCopy = (rel, remoteContent, localContent, extra) => {
+                const dir = (extra && extra.dir) || findBatchDir(rel) || nextBatchDir()
+
+                const fileBase = basename(rel)
+                if (typeof localContent === 'string') {
+                  writeFileSync(join(dir, fileBase + '.kept'), hdrOf('kept', rel) + localContent, 'utf8')
+                }
+                writeFileSync(join(dir, fileBase + '.conflict'), hdrOf('conflict', rel) + remoteContent, 'utf8')
+                writeFileSync(join(dir, 'info.md'),
+                  infoOf(rel, { ...(extra || {}), bid: basename(dir) }), 'utf8')
+                return true
+              }
+
+              const clearConflictCopy = (rel) => {
+                let n = 0
+                try {
+                  for (const batch of readdirSync(conflictRoot)) {
+                    const d = join(conflictRoot, batch)
+                    let info = ''
+                    try { info = readFileSync(join(d, 'info.md'), 'utf8') } catch { continue }
+                    if (!info.includes('`' + rel + '`')) continue
+                    rmSync(d, { recursive: true, force: true })
+                    n += 1
+                  }
+                } catch {}
+                return n
+              }
+
+              let applied = 0, kept = 0, savedConflicts = 0, cleaned = 0, merged = 0
+
+              const clientConflicts = []
+              const conflictSet = new Set((Array.isArray(j.conflicts) ? j.conflicts : [])
+                .map((c) => String((c && c.path) || '')))
+              if (r.ok && Array.isArray(j.files)) {
+                for (const f of j.files) {
+                  const rel = String((f && f.path) || '')
+                  if (!rel || rel.startsWith('/') || rel.split('/').includes('..')) continue
+                  if (conflictSet.has(rel)) continue
+                  const content = String(f.content == null ? '' : f.content)
+                  const remoteHash = hashText(content)
+                  const dst = join(home0, '.dsh', rel)
+                  let localHash
+                  try { localHash = hashText(readFileSync(dst)) } catch { localHash = undefined }
+
+                  const d = mergeDecision(stFor[rel] || null, localHash, remoteHash, !!j.readOnly)
+                  if (d === 'only-remote' || d === 'take-remote') {
+                    mkdirSync(dirname(dst), { recursive: true })
+                    writeFileSync(dst, content, 'utf8')
+                    localHash = remoteHash
+                    applied += 1
+                    if (clearConflictCopy(rel)) cleaned += 1
+                    writeBase(rel, content)
+                  } else if (d === 'conflict') {
+                    let mine = null
+                    try { mine = readFileSync(dst, 'utf8') } catch {}
+                    let baseText = null
+                    try { baseText = readFileSync(basePathOf(rel), 'utf8') } catch {}
+
+                    if (baseText != null && mine != null) {
+                      const mg = merge3(baseText, mine, content)
+                      if (mg.ok) {
+                        writeFileSync(dst, mg.text, 'utf8')
+                        localHash = hashText(mg.text)
+                        applied += 1
+                        merged += 1
+                        if (clearConflictCopy(rel)) cleaned += 1
+                        writeBase(rel, mg.text)
+                        stFor[rel] = baseRec(localHash, remoteHash, stamp)
+                        continue
+                      }
+                    }
+
+                    const bidDir = findBatchDir(rel) || nextBatchDir()
+                    let baseHash0 = null
+                    try { baseHash0 = hashText(baseText) } catch {}
+                    if (saveConflictCopy(rel, content, mine, {
+                      dir: bidDir, baseHash: baseHash0, localHash: hashText(mine || ''),
+                      remoteHash, remoteName: srcName, remoteUrl: String(cfg.remoteUrl || ''),
+                    })) savedConflicts += 1
+                    clientConflicts.push({ path: rel, rule: 'both-changed',
+                                           remote: { hash: remoteHash, content } })
+                  } else {
+                    kept += 1
+
+                    if (d === 'same') {
+                      if (clearConflictCopy(rel)) cleaned += 1
+                      writeBase(rel, content)
+                    }
+                  }
+                  stFor[rel] = baseRec(localHash, remoteHash, stamp)
+                }
+              }
+
+              if (r.ok && Array.isArray(j.conflicts) && j.conflicts.length) {
+                for (const c of j.conflicts) {
+                  const rel = String((c && c.path) || '')
+                  const content = c && c.remote ? c.remote.content : null
+                  if (!rel || rel.startsWith('/') || rel.split('/').includes('..')) continue
+                  if (typeof content !== 'string') continue
+                  if (saveConflictCopy(rel, content, undefined, {
+                    baseHash: (baseline0 && baseline0[rel]) || null,
+                    remoteHash: hashText(content), remoteName: srcName,
+                    remoteUrl: String(cfg.remoteUrl || ''),
+                  })) savedConflicts += 1
+
+                  const local = join(home0, '.dsh', rel)
+                  let lh
+                  try { lh = hashText(readFileSync(local)) } catch { lh = undefined }
+                  stFor[rel] = baseRec(lh, hashText(content), stamp)
+                }
+              }
+              saveSyncState(state)
+              return send({ ok: r.ok, status: r.status, ...j,
+                conflicts: [...clientConflicts, ...(Array.isArray(j.conflicts) ? j.conflicts : [])],
+                applied, kept, savedConflicts, cleaned, merged,
+                error: r.ok ? undefined : (j.error || ('主服务器回 ' + r.status)) })
+            }
+            return send({ ok: false, error: 'action 只能是 me / sync' }, 400)
+          } catch (e) { return send({ ok: false, error: String(e && e.message || e) }) }
+        },
       })
 
       const offSave = webServer.register({
@@ -1955,7 +3078,8 @@ export function apply(ctx, config = {}) {
         },
       })
 
-      return () => { offResource(); offSave(); offMeta(); offPromote(); offZone(); offSnip() }
+      return () => { offResource(); offCfg(); offLayout(); offCfgImport(); offTokNew(); offTokDel()
+        ; offRemote(); offSave(); offMeta(); offPromote(); offZone(); offSnip() }
     })
   }
 

@@ -1,0 +1,132 @@
+{
+  "_comment": "新装时的默认层定义 —— `bin/init.js` 和插件启动时（配置文件不存在）都复制这一份。改默认只改这里，别再各写一遍。顶层 `root` = 统一主路径（空 = ~/.dsh，可指到 .dsh 之外），`cold` = 冷区（相对 root 的细分路径，空 = archived）；每层 `dirs` 只写**相对 root 的细分路径**，冷区不手写、按层名自动推成 <cold>/<层名>（tale 2026-11-27 第 14 轮）。 🔴 层 dirs 指向的每个目录必须整目录都是记忆的（tale 2026-11-27：「如果有共用目录的情况 必须细分到记忆插件的私有目录」）—— 否则「哪些文件同步、哪些不同步」说不清。`logs/` 根下混着别的程序的产物，所以只指向三个专属子目录。",
+  "version": 2,
+  "root": "",
+  "cold": "",
+  "layers": [
+    {
+      "name": "rules",
+      "weight": 5,
+      "files": [
+        "AGENTS.md",
+        "LOOP.md",
+        "STATE.md",
+        "RESTORE.md"
+      ]
+    },
+    {
+      "name": "private",
+      "weight": 5,
+      "dirs": [
+        "private"
+      ],
+      "exts": [
+        ".md",
+        ".enc"
+      ]
+    },
+    {
+      "name": "skills",
+      "weight": 5,
+      "dirs": [
+        "skills"
+      ],
+      "exts": [
+        ".md"
+      ],
+      "only_names": [
+        "SKILL.md",
+        "CASES.md"
+      ]
+    },
+    {
+      "name": "docs",
+      "weight": 4,
+      "dirs": [
+        "docs"
+      ],
+      "exts": [
+        ".md"
+      ],
+      "exclude_names": [
+        "README.md"
+      ]
+    },
+    {
+      "name": "profiles",
+      "weight": 4,
+      "dirs": [
+        "profiles/users",
+        "profiles/tgchats"
+      ],
+      "exts": [
+        ".md"
+      ],
+      "exclude_names": [
+        "README.md"
+      ]
+    },
+    {
+      "name": "reviews",
+      "weight": 2,
+      "dirs": [
+        "reviews"
+      ],
+      "exts": [
+        ".md"
+      ],
+      "window": 7
+    },
+    {
+      "name": "daily",
+      "weight": 3,
+      "dirs": [
+        "daily"
+      ],
+      "exts": [
+        ".md"
+      ],
+      "window": 3
+    },
+    {
+      "name": "logs",
+      "weight": 1,
+      "dirs": [
+        "logs/changelog",
+        "logs/outbound",
+        "logs/skills"
+      ],
+      "exts": [
+        ".md"
+      ],
+      "window": 3
+    },
+    {
+      "name": "info",
+      "weight": 4,
+      "dirs": [
+        "info"
+      ],
+      "depth": 9,
+      "exts": [
+        ".md"
+      ]
+    },
+    {
+      "name": "conflict",
+      "weight": 2,
+      "dirs": [
+        "conflict"
+      ],
+      "exts": [
+        ".md",
+        ".kept",
+        ".conflict"
+      ],
+      "exclude_names": [
+        "README.md"
+      ],
+      "depth": 9
+    }
+  ]
+}
