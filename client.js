@@ -96,6 +96,13 @@ window.__ModuleLoader__.load({
       { key: 'del', ch: '删', label: '删（能删除）' },
     ]
 
+    function appendTag(seq, tag, sym) {
+      const kept = seq.filter((y) => !(y.k === 'tag' && y.v === tag))
+      const last = kept[kept.length - 1]
+      const hasSym = last && last.k === 'sym' && last.v !== '(' && last.v !== ')'
+      return hasSym ? [...kept, { k: 'tag', v: tag }] : [...kept, { k: 'sym', v: sym || '+' }, { k: 'tag', v: tag }]
+    }
+
     function seqPairs(seq) {
       const out = []
       let pending = ''
@@ -473,7 +480,9 @@ window.__ModuleLoader__.load({
 
       const [catOptions, setCatOptions] = React.useState([])
 
-      const loadFacets = React.useCallback(() => {
+      const loadFacets = React.useCallback((ov) => {
+
+        const seqNow = (ov && Array.isArray(ov.tagSeq)) ? ov.tagSeq : tagSeq
         const p2 = new URLSearchParams()
 
         const inlineMust = []
@@ -490,7 +499,7 @@ window.__ModuleLoader__.load({
         if (inlineMust.length) p2.set('must', inlineMust.join(' '))
         if (fLayers.length) p2.set('layer', fLayers.join(','))
         if (fCats.length) p2.set('category', fCats.join(','))
-        if (tagSeq.length) p2.set('tagseq', JSON.stringify(seqPairs(tagSeq)))
+        if (seqNow.length) p2.set('tagseq', JSON.stringify(seqPairs(seqNow)))
         if (fMinImp) p2.set('minimp', fMinImp)
         if (fMaxImp) p2.set('maximp', fMaxImp)
         p2.set('zone', fZone.length === 0 ? 'none' : fZone.length === 1 ? fZone[0] : 'both')
@@ -2233,12 +2242,11 @@ window.__ModuleLoader__.load({
                   }
                   const t = raw.startsWith('/') ? raw.slice(1) : raw
                   if (t) {
-
-                    const kept = tagSeq.filter((y) => !(y.k === 'tag' && y.v === t))
-                    setTagSeq([...kept, { k: 'sym', v: pendingSym }, { k: 'tag', v: t }])
+                    const next = appendTag(tagSeq, t, pendingSym)
+                    setTagSeq(next)
                     setPendingSym('+')
 
-                    loadFacets()
+                    loadFacets({ tagSeq: next })
                     setTagInput('')
                     setTagOpen(true)
                     return
@@ -2250,9 +2258,10 @@ window.__ModuleLoader__.load({
                     e.preventDefault()
 
                     const i = tagCursor >= 0 ? tagCursor : tagSeq.length - 1
-                    setTagSeq(tagSeq.filter((_y, j) => j !== i))
+                    const next = tagSeq.filter((_y, j) => j !== i)
+                    setTagSeq(next)
                     setTagCursor(-1)
-                    if (tagSeq.length > 1) { loadFacets(); setTagOpen(true) }
+                    if (next.length) { loadFacets({ tagSeq: next }); setTagOpen(true) }
                   }
                 } else if (e.key === 'Escape') setTagOpen(false)
               },
@@ -2293,9 +2302,10 @@ window.__ModuleLoader__.load({
                 title: sym === '(' || sym === ')' ? T('插入一个括号') : T('下一个 tag 用这个符号'),
                 onClick: () => {
                   if (sym === '(' || sym === ')') {
-                    setTagSeq([...tagSeq, { k: 'sym', v: sym }])
+                    const next = [...tagSeq, { k: 'sym', v: sym }]
+                    setTagSeq(next)
                     setTagInput('')
-                    loadFacets()
+                    loadFacets({ tagSeq: next })
                   } else {
                     setPendingSym(sym)
                     setTagInput('')
@@ -2325,12 +2335,12 @@ window.__ModuleLoader__.load({
                 },
                 onMouseDown: (e) => e.preventDefault(),
                 onClick: () => {
-                  const kept = tagSeq.filter((y) => !(y.k === 'tag' && y.v === o.tag))
-                  setTagSeq([...kept, { k: 'sym', v: pendingSym }, { k: 'tag', v: o.tag }])
+                  const next = appendTag(tagSeq, o.tag, pendingSym)
+                  setTagSeq(next)
                   setPendingSym('+')
                   setTagInput('')
 
-                  loadFacets(); setTagOpen(true)
+                  loadFacets({ tagSeq: next }); setTagOpen(true)
                 },
               },
                 h('span', null, o.tag),
